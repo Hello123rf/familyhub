@@ -124,6 +124,28 @@ function mapWmoCode(code: number): WeatherCondition {
   return 'cloudy';
 }
 
+/**
+ * Stable translation key for a WMO code, mirroring describeWmo()'s buckets.
+ *
+ * Emitted alongside the English `description` so the client can localise the
+ * condition without the server needing to know the viewer's language. Keys
+ * live under the `weather.conditions` namespace in src/i18n/messages/*.json.
+ */
+export function wmoDescriptionKey(code: number): string {
+  if (code === 0) return 'clearSky';
+  if (code === 1) return 'mainlyClear';
+  if (code === 2) return 'partlyCloudy';
+  if (code === 3) return 'overcast';
+  if (code === 45 || code === 48) return 'fog';
+  if (code >= 51 && code <= 55) return 'drizzle';
+  if (code >= 61 && code <= 65) return 'rain';
+  if (code >= 71 && code <= 75) return 'snow';
+  if (code >= 80 && code <= 82) return 'rainShowers';
+  if (code >= 85 && code <= 86) return 'snowShowers';
+  if (code >= 95 && code <= 99) return 'thunderstorm';
+  return 'cloudy';
+}
+
 function describeWmo(code: number): string {
   // Human-readable description — kept intentionally short. The widget shows
   // this beneath the temperature.
@@ -248,6 +270,7 @@ export async function fetchWeatherData(
     humidity: Math.round(current.relative_humidity_2m),
     windSpeed: Math.round(current.wind_speed_10m),
     description: describeWmo(current.weather_code),
+    descriptionKey: wmoDescriptionKey(current.weather_code),
   };
 
   // ── Sunrise / sunset from today's daily entry ─────────────────────────────

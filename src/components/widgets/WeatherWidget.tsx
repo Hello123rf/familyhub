@@ -42,6 +42,7 @@ import {
 import { cn } from '@/lib/utils';
 import { DAYS_SHORT_ARRAY } from '@/lib/constants/days';
 import { WidgetContainer } from './WidgetContainer';
+import { useTranslations, useLocale } from 'next-intl';
 import { useTimeFormat } from '@/components/providers';
 import { formatDisplayHour, formatDisplayTime } from '@/lib/utils/timeFormat';
 
@@ -63,7 +64,32 @@ export interface CurrentWeather {
   condition: WeatherCondition;
   humidity: number;
   windSpeed: number;
+  /** Provider-supplied English text. Fallback when no descriptionKey exists. */
   description: string;
+  /**
+   * Stable i18n key under `weather.conditions`, set by providers whose
+   * condition text we generate ourselves (Open-Meteo). Absent for providers
+   * that return their own prose (Pirate Weather, OpenWeatherMap), which fall
+   * back to `description`.
+   */
+  descriptionKey?: string;
+}
+
+/**
+ * Localised short weekday from the provider's fixed Sun-Sat token.
+ *
+ * All three providers emit the same DAYS_SHORT_ARRAY tokens, each computed in
+ * whichever timezone is correct for that provider, so mapping the token back to
+ * an index preserves their timezone handling while letting the client pick the
+ * language. 2024-01-07 was a Sunday; UTC-anchored so the offset maps exactly.
+ */
+function localizeDayName(dayName: string, locale: string): string {
+  const idx = DAYS_SHORT_ARRAY.indexOf(dayName as (typeof DAYS_SHORT_ARRAY)[number]);
+  if (idx < 0) return dayName;
+  return new Date(Date.UTC(2024, 0, 7 + idx)).toLocaleDateString(locale, {
+    weekday: 'short',
+    timeZone: 'UTC',
+  });
 }
 
 export interface ForecastDay {
@@ -479,6 +505,7 @@ function CurrentConditions({
   timezone?: string;
 }) {
   const { timeFormat } = useTimeFormat();
+  const t = useTranslations('weather');
   const temp  = formatTemp(weather.temperature, units);
   const feels = formatTemp(weather.feelsLike, units);
 
@@ -493,7 +520,9 @@ function CurrentConditions({
         <div>
           <div className="text-4xl font-bold leading-none">{temp}</div>
           <div className="text-sm text-muted-foreground capitalize mt-0.5">
-            {weather.description}
+            {weather.descriptionKey && typeof t.has === 'function' && t.has(`conditions.${weather.descriptionKey}`)
+              ? t(`conditions.${weather.descriptionKey}`)
+              : weather.description}
           </div>
           {location && (
             <div className="text-xs text-muted-foreground/70 mt-0.5 truncate max-w-[140px]">
@@ -555,6 +584,8 @@ function DayHeader({
   days: ForecastDay[];
   units: WeatherUnits;
 }) {
+  const t = useTranslations('weather');
+  const locale = useLocale();
   const now = new Date();
   const todayLocalStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
@@ -576,7 +607,7 @@ function DayHeader({
         const d = new Date(day.date);
         const dayLocalStr = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
         const isToday = dayLocalStr === todayLocalStr;
-        const label = isToday ? 'TODAY' : day.dayName.toUpperCase();
+        const label = isToday ? t('today') : localizeDayName(day.dayName, locale).toUpperCase();
 
         const leftPct  = ((day.low  - globalMin) / span) * 100;
         const widthPct = ((day.high - day.low)   / span) * 100;

@@ -28,6 +28,7 @@
 import * as React from 'react';
 import { useEffect, useState } from 'react';
 import { format } from 'date-fns';
+import { useLocale } from 'next-intl';
 import { Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTimeFormat } from '@/components/providers';
@@ -83,6 +84,7 @@ export const ClockWidget = React.memo(function ClockWidget({
   className,
 }: ClockWidgetProps) {
   const { timeFormat, displayTimezone } = useTimeFormat();
+  const locale = useLocale();
   const effectiveTimeFormat = format24Hour === undefined
     ? timeFormat
     : format24Hour ? '24h' : '12h';
@@ -105,13 +107,16 @@ export const ClockWidget = React.memo(function ClockWidget({
     return () => clearInterval(intervalId);
   }, []);
 
-  // Format strings for date-fns
-  // See: https://date-fns.org/docs/format
-  const dateFormat = 'EEEE, MMMM d'; // e.g., "Tuesday, January 21"
-
   // Formatted strings
   const timeString = formatDisplayTime(currentTime, effectiveTimeFormat, { showSeconds }, displayTimezone);
-  const dateString = format(toDisplayDate(currentTime, displayTimezone), dateFormat);
+  // Locale-aware, via Intl rather than a fixed date-fns pattern: word order
+  // differs per language ("Tuesday, January 21" vs "Dienstag, 21. Januar"), so
+  // a hardcoded pattern would render German words in US order.
+  const dateString = toDisplayDate(currentTime, displayTimezone).toLocaleDateString(locale, {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  });
 
   // Size-based styling
   const timeStyles = {
