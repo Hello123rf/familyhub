@@ -61,9 +61,19 @@ export function GoogleManualTokenForm({ onSaved }: { onSaved?: () => void }) {
       }
 
       const data = await res.json();
+      // Report what the token actually covered, not just that it worked. The
+      // scopes are chosen in the Playground, so someone who meant to include
+      // Tasks and forgot to tick it would otherwise see a success message and
+      // then wonder why no tasks appeared.
+      const parts: string[] = [];
+      if (data.capabilities?.includes('calendar')) {
+        parts.push(`${data.calendarCount ?? 0} calendar${data.calendarCount === 1 ? '' : 's'} imported`);
+      }
+      if (data.capabilities?.includes('gmail')) parts.push('Gmail connected for bus tracking');
+      if (data.needsTaskListSelection) parts.push('choose which task lists to show under Tasks sync');
       toast({
-        title: 'Google Calendar connected',
-        description: `${data.calendarCount ?? 0} calendar${data.calendarCount === 1 ? '' : 's'} imported.`,
+        title: `Google connected: ${data.enabled ?? 'Calendar'}`,
+        description: parts.join(' · ') || undefined,
         variant: 'success',
       });
       // Clear the sensitive fields; they're never hydrated from the server.
@@ -105,6 +115,46 @@ export function GoogleManualTokenForm({ onSaved }: { onSaved?: () => void }) {
         Do all of this signed into a <span className="underline">single</span> Google account — the one
         whose calendars you want — ideally in a private/incognito window, so you never mix up accounts.
       </p>
+
+        <p className="text-xs text-muted-foreground">
+          One token can cover more than the calendar. The Playground&apos;s API list is long, so use the
+          <strong> Input your own scopes</strong> box at the top of Step 1 and paste the lines you want,
+          space-separated. Paste only what you want Prism to use:
+        </p>
+        <ul className="list-disc space-y-1.5 pl-5 text-xs text-muted-foreground">
+          <li>
+            <strong>Calendar</strong> &mdash; two-way sync. Both lines:
+            <code className="mt-0.5 block break-all text-[11px]">
+              https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.readonly
+            </code>
+          </li>
+          <li>
+            <strong>Tasks</strong> &mdash; Google Tasks as a task source:
+            <code className="mt-0.5 block break-all text-[11px]">https://www.googleapis.com/auth/tasks</code>
+          </li>
+          <li>
+            <strong>Gmail</strong> &mdash; bus tracking only:
+            <code className="mt-0.5 block break-all text-[11px]">https://www.googleapis.com/auth/gmail.modify</code>
+            <span className="mt-0.5 block">
+              Bus tracking marks the transport emails it has read, which needs <code>modify</code>.
+              <code> gmail.readonly</code> also works if you would rather it never wrote anything, but then
+              those emails stay unread in your inbox.
+            </span>
+          </li>
+        </ul>
+        <p className="text-xs text-muted-foreground">
+          Leave one out and Prism simply will not enable it. A token cannot gain a scope later, so to add
+          one afterwards you generate a new token with the extra scope included and paste it here again.
+        </p>
+        <ul className="list-disc space-y-1 pl-5 text-xs text-muted-foreground">
+          <li><strong>Google Calendar API v3</strong> &mdash; two-way calendar sync</li>
+          <li><strong>Tasks API v1</strong> &mdash; Google Tasks as a task source</li>
+          <li><strong>Gmail API v1</strong> &mdash; bus tracking only, which reads transport emails</li>
+        </ul>
+        <p className="text-xs text-muted-foreground">
+          Leave one out and Prism simply will not enable it. A token cannot gain a scope later, so to add
+          one afterwards you generate a new token with the extra scope ticked and paste it here again.
+        </p>
 
       <ol className="list-decimal space-y-1 pl-5 text-xs text-muted-foreground">
         <li>
