@@ -150,12 +150,13 @@ export async function POST(request: NextRequest) {
     // Store calendars. Persist the *pasted* refresh token — the refresh grant
     // does not return a new one.
     let result: { calendarCount: number; accountEmail?: string | null } = { calendarCount: 0 };
-    if (capabilities.includes('calendar')) {
+    if (capabilities.includes('calendar') || capabilities.includes('calendarReadonly')) {
     try {
       result = await storeGoogleCalendarConnection({
         userId: auth.userId,
         tokens: { accessToken: tokens.access_token, refreshToken, expiresIn: tokens.expires_in },
         accountEmail,
+        readOnly: capabilities.includes('calendarReadonly'),
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : '';
@@ -222,7 +223,9 @@ export async function POST(request: NextRequest) {
       action: 'create',
       entityType: 'integration',
       summary: `Connected Google via manual refresh token: ${describeCapabilities(capabilities)}${
-        capabilities.includes('calendar') ? ` (${result.calendarCount} calendars)` : ''
+        capabilities.includes('calendar') || capabilities.includes('calendarReadonly')
+          ? ` (${result.calendarCount} calendars)`
+          : ''
       }`,
     });
 
