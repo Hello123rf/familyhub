@@ -39,7 +39,7 @@ export function TasksView() {
     showAddModal, setShowAddModal,
     editingTask, setEditingTask,
     filteredTasks,
-    toggleTask, editTask, handleAddClick,
+    toggleTask, editTask, deleteTask, handleAddClick,
     completedCount, totalCount,
     taskLists,
     autoSyncing,
@@ -187,6 +187,7 @@ export function TasksView() {
 
         <div className="flex-1 overflow-y-auto p-4">
           <TaskContentArea
+            deleteTask={deleteTask}
             loading={loading} error={error} filteredTasks={filteredTasks}
             groupMode={groupMode}
             tasksByUser={tasksByUser} tasksByList={tasksByList}
@@ -232,6 +233,13 @@ export function TasksView() {
           <TaskModal
             task={editingTask}
             onClose={() => setEditingTask(null)}
+            onDelete={() => {
+              // Close first: deleteTask opens its own confirmation, and two
+              // stacked dialogs on a wall display is a trap.
+              const id = editingTask.id;
+              setEditingTask(null);
+              deleteTask(id);
+            }}
             onSave={async (updatedTask) => {
               try {
                 const res = await fetch(`/api/tasks/${editingTask.id}`, {
