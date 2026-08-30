@@ -4,6 +4,9 @@ All notable changes to Prism are documented in this file.
 
 ## Unreleased
 
+### Fixed
+- **Immich photos display in Firefox and other browsers that cannot decode HEIC.** Lightbox, screensaver, and wallpaper were proxying the iPhone original (`image/heic`). Prism now asks Immich for a web-safe full-size JPEG/WebP (falling back to the preview), converts leftover HEIC with sharp, and ignores previously cached originals.
+
 ## [1.19.0] – 2026-08-29
 
 ### Added

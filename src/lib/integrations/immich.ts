@@ -15,6 +15,7 @@
  * the share URL field and use Prism as a proxy to probe the home network.
  */
 
+import sharp from 'sharp';
 import { validatePublicUrl, safeFetch, UnsafeUrlError } from '@/lib/utils/safeFetch';
 
 export interface ImmichShareCredentials {
@@ -339,9 +340,49 @@ export async function fetchSharedLink(
   return mapSharedLink(raw, assetsRaw);
 }
 
+function thumbnailPath(
+  serverUrl: string,
+  assetId: string,
+  shareKey: string,
+  size: 'preview' | 'fullsize',
+): string {
+  return `${serverUrl}/api/assets/${assetId}/thumbnail?key=${encodeURIComponent(shareKey)}&size=${size}`;
+}
+
+/** True when Immich (or a cached original) handed us HEIC/HEIF bytes. */
+function isHeic(contentType: string, buffer: Uint8Array): boolean {
+  const mime = (contentType.split(';')[0] ?? '').trim().toLowerCase();
+  if (mime === 'image/heic' || mime === 'image/heif' || mime === 'image/heic-sequence') {
+    return true;
+  }
+  // ISO BMFF: size(4) + 'ftyp' + brand (heic / heif / mif1 / msf1)
+  if (buffer.length < 12) return false;
+  const brand = String.fromCharCode(buffer[4]!, buffer[5]!, buffer[6]!, buffer[7]!);
+  if (brand !== 'ftyp') return false;
+  const major = String.fromCharCode(buffer[8]!, buffer[9]!, buffer[10]!, buffer[11]!).toLowerCase();
+  return major === 'heic' || major === 'heif' || major === 'mif1' || major === 'msf1';
+}
+
 /**
- * Download an asset's binary via the shared link. Returns the raw buffer +
- * upstream Content-Type so the proxy can pass it through unchanged.
+ * Browsers like Firefox (and most Linux Chromium) cannot decode HEIC.
+ * Re-encode to JPEG the same way local uploads do.
+ */
+async function toWebJpeg(buffer: Uint8Array): Promise<{ buffer: Uint8Array<ArrayBuffer>; contentType: string }> {
+  const jpeg = await sharp(buffer).rotate().jpeg({ quality: 85 }).toBuffer();
+  const bytes = new Uint8Array(jpeg.byteLength);
+  bytes.set(jpeg);
+  return { buffer: bytes, contentType: 'image/jpeg' };
+}
+
+/**
+ * Download an asset's binary via the shared link for on-screen display.
+ *
+ * We never fetch `/original`. That endpoint needs the share's "allow
+ * download" flag (Immich 404s without it) and returns iPhone HEIC, which
+ * Firefox and kiosk browsers cannot paint. Thumbnails use Immich's
+ * `preview`; full-size display uses `fullsize` (JPEG/WebP when Immich has
+ * generated it, otherwise Immich falls back to preview). Leftover HEIC is
+ * converted with sharp before we return.
  *
  * For password-protected shares, uses the cached session cookie when one
  * is available for creds.sourceId; falls back to a fresh login on cache
@@ -365,17 +406,22 @@ export async function downloadImmichAsset(
     }
   }
 
-  const path = opts.thumb
-    ? `/api/assets/${assetId}/thumbnail?key=${encodeURIComponent(creds.shareKey)}&size=preview`
-    : `/api/assets/${assetId}/original?key=${encodeURIComponent(creds.shareKey)}`;
-
   const headers: Record<string, string> = {};
   if (cookie) headers.Cookie = cookie;
+
+  const get = (size: 'preview' | 'fullsize') =>
+    safeFetch(thumbnailPath(creds.serverUrl, assetId, creds.shareKey, size), { headers });
 
   // safeFetch re-validates any redirect Location, so a share URL that 30x-
   // redirects to an internal host can no longer be used to exfiltrate the
   // internal response (was `redirect: 'follow'`, which bypassed the guard).
-  const res = await safeFetch(`${creds.serverUrl}${path}`, { headers });
+  let res = await get(opts.thumb ? 'preview' : 'fullsize');
+  // Older Immich (no fullsize size) or derivative not generated yet → preview.
+  // Only 404/400: 401/403 mean a bad share session (drop the cookie below);
+  // 5xx should fail closed rather than hide an Immich outage behind a retry.
+  if (!res.ok && !opts.thumb && (res.status === 404 || res.status === 400)) {
+    res = await get('preview');
+  }
   if (!res.ok) {
     // If the cache returned a stale cookie that the server rejected, drop
     // it and let the next call re-login. We don't auto-retry here because
@@ -389,8 +435,15 @@ export async function downloadImmichAsset(
   }
 
   const arrayBuffer = await res.arrayBuffer();
+  const raw = Buffer.from(arrayBuffer);
   const contentType = res.headers.get('content-type') ?? 'application/octet-stream';
-  return { buffer: Buffer.from(arrayBuffer), contentType };
+
+  if (isHeic(contentType, raw)) {
+    return toWebJpeg(raw);
+  }
+  const bytes = new Uint8Array(raw.byteLength);
+  bytes.set(raw);
+  return { buffer: bytes, contentType };
 }
 
 // Re-export so route handlers can branch on UnsafeUrlError specifically
