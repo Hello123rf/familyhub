@@ -93,6 +93,25 @@
     @apply border-border;
   }
 
+  /* Root size stands in for viewing distance, which CSS cannot measure. The
+     pointer type is the closest proxy available:
+
+       fine   - mouse or trackpad, so someone is sitting at a desk, close up
+       coarse - a touchscreen, typically a wall or counter display
+       none   - no input device at all, which in practice means a kiosk: a Pi
+                or an HDMI stick driving a screen nobody ever touches
+
+     `none` was not handled here and fell through to the 16px base, so the one
+     display class guaranteed to be read from a few feet away got the second
+     smallest size in the ladder. On a 27-32in panel at the 3-4ft a kitchen
+     display is actually read from, that puts the x-height of `text-sm` at
+     roughly 7-9 arcmin: at or below the critical print size where reading
+     speed starts to drop off. Climbing to 22px lifts it to about 9-12.
+     Readable, rather than a squint. It now climbs alongside `coarse`.
+
+     A wall display with a mouse attached still reports `fine` and stays at
+     14px. That case is genuinely indistinguishable from a desk, so it is left
+     to the per-layout font scale in Settings -> Displays. */
   html {
     font-size: 16px;
   }
@@ -104,19 +123,22 @@
     }
   }
 
-  @media (min-width: 768px) and (pointer: coarse) {
+  @media (min-width: 768px) and (pointer: coarse),
+    (min-width: 768px) and (pointer: none) {
     html {
       font-size: 18px;
     }
   }
 
-  @media (min-width: 1024px) and (pointer: coarse) {
+  @media (min-width: 1024px) and (pointer: coarse),
+    (min-width: 1024px) and (pointer: none) {
     html {
       font-size: 20px;
     }
   }
 
-  @media (min-width: 1400px) and (pointer: coarse) {
+  @media (min-width: 1400px) and (pointer: coarse),
+    (min-width: 1400px) and (pointer: none) {
     html {
       font-size: 22px;
     }

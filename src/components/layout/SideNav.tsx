@@ -125,7 +125,7 @@ export function SideNav({ user, onLogout, onLogin, uiHidden, className }: SideNa
         ref={asideRef}
         onClick={handleAsideClick}
         className={cn(
-          'fixed left-0 top-0 z-40 h-screen',
+          'fixed left-0 top-0 z-40 h-[var(--app-vh,100vh)]',
           'bg-card/95',
           'flex flex-col',
           'transition-[transform,opacity,width] duration-300 ease-in-out',
