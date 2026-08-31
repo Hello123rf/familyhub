@@ -13,6 +13,8 @@ import { renderHook, act } from '@testing-library/react';
 import {
   usePersistedState,
   useSessionScopedState,
+  usePersistedStringSet,
+  useSessionScopedStringSet,
   displayWentIdle,
   IDLE_FORGET_MS,
   oneOf,
@@ -127,5 +129,65 @@ describe('useSessionScopedState', () => {
     renderHook(() => useSessionScopedState<string | null>('f', null, isListFilter));
 
     expect(JSON.parse(window.localStorage.getItem('f')!)).toBeNull();
+  });
+});
+
+/**
+ * A Set does not survive JSON — it serialises to `{}` — so storing one
+ * directly would come back empty and silently show everything, which on a
+ * filter reads as the filter having been cleared by itself.
+ */
+describe('usePersistedStringSet', () => {
+  it('round-trips a Set through storage', () => {
+    const { result } = renderHook(() => usePersistedStringSet('s'));
+    act(() => result.current[1](new Set(['b', 'a'])));
+
+    const second = renderHook(() => usePersistedStringSet('s'));
+    expect([...second.result.current[0]].sort()).toEqual(['a', 'b']);
+  });
+
+  it('does not store a Set as an empty object', () => {
+    const { result } = renderHook(() => usePersistedStringSet('s'));
+    act(() => result.current[1](new Set(['x'])));
+    expect(window.localStorage.getItem('s')).toBe('["x"]');
+  });
+
+  it('accepts an updater, like useState', () => {
+    const { result } = renderHook(() => usePersistedStringSet('s', ['a']));
+    act(() => result.current[1]((prev) => new Set([...prev, 'b'])));
+    expect([...result.current[0]].sort()).toEqual(['a', 'b']);
+  });
+
+  it('drops stored members that are no longer valid options', () => {
+    window.localStorage.setItem('s', JSON.stringify(['breakfast', 'brunch']));
+    const isMeal = oneOf('breakfast', 'lunch');
+    const { result } = renderHook(() => usePersistedStringSet('s', [], isMeal));
+    // One bad member invalidates the stored value rather than being silently
+    // kept: a half-valid filter is still a filter the UI cannot fully undo.
+    expect([...result.current[0]]).toEqual([]);
+  });
+
+  it('survives storage being unavailable', () => {
+    const spy = jest.spyOn(window.localStorage.__proto__, 'getItem')
+      .mockImplementation(() => { throw new Error('blocked'); });
+    const { result } = renderHook(() => usePersistedStringSet('s', ['a']));
+    expect([...result.current[0]]).toEqual(['a']);
+    spy.mockRestore();
+  });
+});
+
+describe('useSessionScopedStringSet', () => {
+  it('forgets the Set once the display has been idle', () => {
+    window.localStorage.setItem('s', JSON.stringify(['a']));
+    window.localStorage.setItem('prism-last-activity', String(Date.now() - IDLE_FORGET_MS - 1));
+    const { result } = renderHook(() => useSessionScopedStringSet('s'));
+    expect([...result.current[0]]).toEqual([]);
+  });
+
+  it('keeps the Set across a reload during active use', () => {
+    window.localStorage.setItem('s', JSON.stringify(['a']));
+    window.localStorage.setItem('prism-last-activity', String(Date.now()));
+    const { result } = renderHook(() => useSessionScopedStringSet('s'));
+    expect([...result.current[0]]).toEqual(['a']);
   });
 });

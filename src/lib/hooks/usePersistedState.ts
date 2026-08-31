@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import type { Dispatch, SetStateAction } from 'react';
 
 /**
  * useState that survives a refresh, stored per browser.
@@ -21,7 +22,7 @@ export function usePersistedState<T>(
   key: string,
   initial: T,
   isValid: (v: unknown) => v is T,
-): [T, (v: T) => void] {
+): [T, Dispatch<SetStateAction<T>>] {
   const [value, setValue] = useState<T>(() => {
     if (typeof window === 'undefined') return initial;
     try {
@@ -54,6 +55,55 @@ export function oneOf<T extends string>(...allowed: readonly T[]) {
 }
 
 export const isBoolean = (v: unknown): v is boolean => typeof v === 'boolean';
+
+/** Validator for an array of strings. */
+export const isStringArray = (v: unknown): v is string[] =>
+  Array.isArray(v) && v.every((x) => typeof x === 'string');
+
+/**
+ * A Set of strings that survives a refresh.
+ *
+ * `Set` does not survive JSON — it serialises to `{}` — so a filter stored
+ * directly through usePersistedState comes back empty and silently shows
+ * everything. Stored as an array and rebuilt on read, in one place rather than
+ * at each call site.
+ *
+ * The identity of the returned Set is stable between renders for the same
+ * contents, so it is safe in a dependency array.
+ */
+export function usePersistedStringSet<T extends string = string>(
+  key: string,
+  initial: readonly NoInfer<T>[] = [],
+  // Optional element guard, for a Set of a string UNION rather than of plain
+  // strings. Without it a stored value that outlived its option would come back
+  // as a member the UI no longer offers, which is the same trap the scalar
+  // validator exists to close.
+  isElement?: (v: unknown) => v is T,
+): [Set<T>, Dispatch<SetStateAction<Set<T>>>] {
+  const guard = useCallback(
+    (v: unknown): v is T[] =>
+      isStringArray(v) && (!isElement || v.every((x) => isElement(x))),
+    [isElement],
+  );
+  const [list, setList] = usePersistedState<T[]>(key, [...initial], guard);
+  const value = useMemo(() => new Set(list), [list]);
+  // Accepts an updater as well as a value, so these read exactly like useState
+  // at the call site. The updater is resolved against a Set rebuilt from the
+  // previous list rather than the memoised one, so it stays correct inside a
+  // batched update.
+  const set = useCallback<Dispatch<SetStateAction<Set<T>>>>(
+    (next) =>
+      setList((prev) => {
+        const resolved =
+          typeof next === 'function'
+            ? (next as (p: Set<T>) => Set<T>)(new Set(prev))
+            : next;
+        return [...resolved].sort();
+      }),
+    [setList],
+  );
+  return [value, set];
+}
 
 /** Written by useIdleDetection on any interaction, across the whole app. */
 const LAST_ACTIVITY_KEY = 'prism-last-activity';
@@ -96,7 +146,7 @@ export function useSessionScopedState<T>(
   key: string,
   initial: T,
   isValid: (v: unknown) => v is T,
-): [T, (v: T) => void] {
+): [T, Dispatch<SetStateAction<T>>] {
   const [value, setValue] = usePersistedState<T>(key, initial, isValid);
   const [ready, setReady] = useState(false);
 
@@ -110,4 +160,38 @@ export function useSessionScopedState<T>(
   }, [ready, initial, setValue]);
 
   return [value, setValue];
+}
+
+/**
+ * Like usePersistedStringSet, but forgotten once the display has been idle a
+ * while — the Set equivalent of useSessionScopedState, for filters.
+ */
+export function useSessionScopedStringSet<T extends string = string>(
+  key: string,
+  initial: readonly NoInfer<T>[] = [],
+  isElement?: (v: unknown) => v is T,
+): [Set<T>, Dispatch<SetStateAction<Set<T>>>] {
+  const guard = useCallback(
+    (v: unknown): v is T[] =>
+      isStringArray(v) && (!isElement || v.every((x) => isElement(x))),
+    [isElement],
+  );
+  const [list, setList] = useSessionScopedState<T[]>(key, [...initial], guard);
+  const value = useMemo(() => new Set(list), [list]);
+  // Accepts an updater as well as a value, so these read exactly like useState
+  // at the call site. The updater is resolved against a Set rebuilt from the
+  // previous list rather than the memoised one, so it stays correct inside a
+  // batched update.
+  const set = useCallback<Dispatch<SetStateAction<Set<T>>>>(
+    (next) =>
+      setList((prev) => {
+        const resolved =
+          typeof next === 'function'
+            ? (next as (p: Set<T>) => Set<T>)(new Set(prev))
+            : next;
+        return [...resolved].sort();
+      }),
+    [setList],
+  );
+  return [value, set];
 }
