@@ -7,6 +7,14 @@
  * pick up the session cookie).
  */
 
+jest.mock('sharp', () => {
+  const toBuffer = jest.fn().mockResolvedValue(Buffer.from([0xff, 0xd8, 0xff]));
+  const jpeg = jest.fn().mockReturnValue({ toBuffer });
+  const rotate = jest.fn().mockReturnValue({ jpeg });
+  const sharpFn = jest.fn().mockReturnValue({ rotate, jpeg, toBuffer });
+  return { __esModule: true, default: sharpFn };
+});
+
 import {
   parseImmichShareUrl,
   fetchSharedLink,
@@ -348,7 +356,7 @@ describe('fetchSharedLink (password-protected)', () => {
 });
 
 describe('downloadImmichAsset', () => {
-  it('downloads the original via /assets/:id/original with the key', async () => {
+  it('downloads a web-safe fullsize thumbnail, not /original', async () => {
     mockFetchOnce(() => ({
       ok: true,
       status: 200,
@@ -362,9 +370,50 @@ describe('downloadImmichAsset', () => {
     );
 
     const url = (global.fetch as jest.Mock).mock.calls[0][0];
-    expect(url).toBe('https://x/api/assets/asset-1/original?key=k');
+    expect(url).toBe('https://x/api/assets/asset-1/thumbnail?key=k&size=fullsize');
     expect(result.contentType).toBe('image/jpeg');
-    expect(result.buffer).toBeInstanceOf(Buffer);
+    expect(result.buffer).toBeInstanceOf(Uint8Array);
+  });
+
+  it('falls back to preview when fullsize is unavailable', async () => {
+    mockFetchSequence([
+      () => ({ ok: false, status: 404, statusText: 'Not Found' }),
+      () => ({
+        ok: true,
+        status: 200,
+        headers: new Headers({ 'content-type': 'image/webp' }),
+        arrayBuffer: () => Promise.resolve(new Uint8Array([0x52, 0x49]).buffer),
+      }),
+    ]);
+
+    const result = await downloadImmichAsset(
+      { serverUrl: 'https://x', shareKey: 'k' },
+      'asset-1',
+    );
+
+    const urls = (global.fetch as jest.Mock).mock.calls.map((c) => c[0]);
+    expect(urls).toEqual([
+      'https://x/api/assets/asset-1/thumbnail?key=k&size=fullsize',
+      'https://x/api/assets/asset-1/thumbnail?key=k&size=preview',
+    ]);
+    expect(result.contentType).toBe('image/webp');
+  });
+
+  it('converts leftover HEIC bytes to JPEG', async () => {
+    mockFetchOnce(() => ({
+      ok: true,
+      status: 200,
+      headers: new Headers({ 'content-type': 'image/heic' }),
+      arrayBuffer: () => Promise.resolve(new Uint8Array([0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70, 0x68, 0x65, 0x69, 0x63]).buffer),
+    }));
+
+    const result = await downloadImmichAsset(
+      { serverUrl: 'https://x', shareKey: 'k' },
+      'asset-1',
+    );
+
+    expect(result.contentType).toBe('image/jpeg');
+    expect(Buffer.from(result.buffer).subarray(0, 2).equals(Buffer.from([0xff, 0xd8]))).toBe(true);
   });
 
   it('downloads the thumbnail when thumb=true', async () => {
@@ -459,9 +508,9 @@ describe('downloadImmichAsset cookie cache (password-protected, with sourceId)',
     // First call is the login.
     expect(calls[0][0]).toBe('https://x/api/shared-links/login?key=k');
     // Second and third are downloads, both carrying the cached cookie.
-    expect(calls[1][0]).toContain('/api/assets/asset-1/original');
+    expect(calls[1][0]).toContain('/api/assets/asset-1/thumbnail?key=k&size=fullsize');
     expect(calls[1][1].headers.Cookie).toContain('immich_auth=cached-token');
-    expect(calls[2][0]).toContain('/api/assets/asset-2/original');
+    expect(calls[2][0]).toContain('/api/assets/asset-2/thumbnail?key=k&size=fullsize');
     expect(calls[2][1].headers.Cookie).toContain('immich_auth=cached-token');
   });
 

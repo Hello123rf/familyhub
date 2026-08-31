@@ -1,7 +1,9 @@
 /**
  * On-disk cache for proxied photo bytes.
  *
- * Originals: data/photos/cache/<sourceId>/<externalId>
+ * Display (web-safe JPEG/WebP): data/photos/cache/<sourceId>/web/<externalId>
+ *   (Older caches stored Immich /original HEIC at <sourceId>/<externalId>;
+ *   that path is no longer read so Firefox/kiosk browsers are not served HEIC.)
  * Thumbs:    data/photos/cache/<sourceId>/thumbs/<externalId>
  *
  * Used by /api/photos/[id]/file when serving Immich-backed photos so we don't
@@ -31,8 +33,13 @@ function sanitize(segment: string): string {
 function cachePath(sourceId: string, externalId: string, thumb: boolean): string {
   const dir = thumb
     ? path.join(CACHE_ROOT, sanitize(sourceId), 'thumbs')
-    : path.join(CACHE_ROOT, sanitize(sourceId));
+    : path.join(CACHE_ROOT, sanitize(sourceId), 'web');
   return path.join(dir, sanitize(externalId));
+}
+
+/** Pre-web-derivative location for a full-size file (Immich /original HEIC). */
+function legacyOriginalPath(sourceId: string, externalId: string): string {
+  return path.join(CACHE_ROOT, sanitize(sourceId), sanitize(externalId));
 }
 
 function metaPath(filePath: string): string {
@@ -56,6 +63,8 @@ export async function readPhotoCache(
       fs.readFile(metaPath(file), 'utf8').catch(() => ''),
     ]);
     const contentType = meta.trim() || 'application/octet-stream';
+    // Never serve a leftover HEIC from a partial upgrade of the web cache.
+    if (/image\/hei[cf]/i.test(contentType)) return null;
     return { buffer, contentType };
   } catch {
     return null;
@@ -92,12 +101,15 @@ export async function clearSourceCache(sourceId: string): Promise<void> {
  * is gone from the upstream album.
  */
 export async function clearPhotoCache(sourceId: string, externalId: string): Promise<void> {
-  const original = cachePath(sourceId, externalId, false);
+  const web = cachePath(sourceId, externalId, false);
   const thumb = cachePath(sourceId, externalId, true);
+  const legacy = legacyOriginalPath(sourceId, externalId);
   await Promise.all([
-    fs.rm(original, { force: true }),
-    fs.rm(metaPath(original), { force: true }),
+    fs.rm(web, { force: true }),
+    fs.rm(metaPath(web), { force: true }),
     fs.rm(thumb, { force: true }),
     fs.rm(metaPath(thumb), { force: true }),
+    fs.rm(legacy, { force: true }),
+    fs.rm(metaPath(legacy), { force: true }),
   ]);
 }
