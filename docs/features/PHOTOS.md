@@ -182,6 +182,8 @@ Saves render cycles + bandwidth on a Raspberry Pi or older tablet.
 
 Each synced OneDrive photo is downloaded once and stored locally. A `photos-cache` Docker volume (default 1 GB-ish; size depends on your photo library) holds the cached files.
 
+**Immich** photos are not copied as iPhone originals. Lightbox, screensaver, and wallpaper request Immich's web-safe `fullsize` (or `preview`) JPEG/WebP so Firefox and other browsers that cannot decode HEIC still show the picture. Cached HEIC from an older Prism version is ignored.
+
 If you delete the volume, the next sync re-downloads everything. The DB rows survive (they reference the path), so tags + GPS data + pin states are preserved.
 
 ---
