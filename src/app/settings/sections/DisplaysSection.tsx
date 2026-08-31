@@ -59,7 +59,7 @@ export function DisplaysSection() {
         <h2 className="text-2xl font-bold">Displays</h2>
         <p className="text-muted-foreground">
           Configure per-display settings for each of your named dashboards.
-          Font scale lets you tune text size for screens that are farther away or have unusual DPI.
+          Text size sets how large this dashboard reads from wherever the screen is actually viewed.
         </p>
       </div>
 
@@ -108,7 +108,7 @@ export function DisplaysSection() {
                 <CardContent className="space-y-3">
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">Font Scale</span>
+                      <span className="text-sm font-medium">Text size</span>
                       <span className={cn(
                         'text-sm tabular-nums',
                         scale !== 100 ? 'text-primary font-medium' : 'text-muted-foreground'
@@ -181,7 +181,8 @@ export function DisplaysSection() {
       <Card className="border-dashed">
         <CardContent className="py-4">
           <p className="text-sm text-muted-foreground">
-            <strong>Tip:</strong> Set a dedicated device to open <code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">/d/your-slug</code> as its home page, then tune font scale here to match its viewing distance and screen size.
+            <strong>Tip:</strong> Set a dedicated device to open <code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">/d/your-slug</code> as its home page, then set the text size here to match how far away it is read from.
+            Larger text means fewer rows fit on the screen, so a dashboard read from across the room holds less than one read at the counter.
             Each named dashboard is independent — changes here don&apos;t affect other displays.
           </p>
         </CardContent>
