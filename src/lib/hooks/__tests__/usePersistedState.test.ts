@@ -191,3 +191,46 @@ describe('useSessionScopedStringSet', () => {
     expect([...result.current[0]]).toEqual(['a']);
   });
 });
+
+/**
+ * The hook must not read storage during the first render.
+ *
+ * The server has no localStorage, so it always renders the default. A stored
+ * value applied during the first client render disagrees with that markup and
+ * React discards the tree (#418). The value is therefore applied after mount,
+ * and the write is gated behind that read — writing first would overwrite the
+ * stored preference with the default on every mount, which is the same as not
+ * persisting at all.
+ */
+describe('hydration safety', () => {
+  it('does not clobber a stored value on mount', () => {
+    window.localStorage.setItem('k', JSON.stringify('person'));
+    renderHook(() => usePersistedState('k', 'none', isGroup));
+    expect(window.localStorage.getItem('k')).toBe(JSON.stringify('person'));
+  });
+
+  it('still applies the stored value once mounted', () => {
+    window.localStorage.setItem('k', JSON.stringify('person'));
+    const { result } = renderHook(() => usePersistedState('k', 'none', isGroup));
+    expect(result.current[0]).toBe('person');
+  });
+
+  it('a changed value is written after hydration', () => {
+    const { result } = renderHook(() => usePersistedState('k', 'none', isGroup));
+    act(() => result.current[1]('list'));
+    expect(window.localStorage.getItem('k')).toBe(JSON.stringify('list'));
+  });
+
+  it('tolerates a validator whose identity changes every render', () => {
+    window.localStorage.setItem('k', JSON.stringify('person'));
+    // An inline arrow is the normal call-site shape; a re-read on every render
+    // would be wasteful and would fight any local edit.
+    const { result, rerender } = renderHook(() =>
+      usePersistedState('k', 'none', (v): v is string => typeof v === 'string'),
+    );
+    expect(result.current[0]).toBe('person');
+    act(() => result.current[1]('none'));
+    rerender();
+    expect(result.current[0]).toBe('none');
+  });
+});
