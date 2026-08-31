@@ -5,6 +5,7 @@ All notable changes to Prism are documented in this file.
 ## Unreleased
 
 ### Fixed
+- **Turning up the display font scale no longer pushes the dashboard off the screen.** The setting made text bigger and the board taller in equal measure, so at 150% the bottom widget was simply below the edge of the screen — on a display nobody can scroll. The dashboard now re-fits itself as the text grows: fewer rows, all of them on screen. Nobody's saved scale changes, and a display that was overflowing stops.
 - **Text is the right size again on a display with no mouse or touchscreen.** Prism picks its text size from what it can tell about the screen it is on, and a display with no pointing device attached — a Pi or a streaming stick driving a wall panel — fell through to the size meant for a phone held at arm's length. That is the one kind of screen guaranteed to be read from across a room, and it was getting nearly the smallest text Prism has. It now scales up with the screen the way a touchscreen already did. If you turned the font scale up under *Settings → Displays* to work around this, you will want to bring it back down.
 
 ## [1.21.0] – 2026-08-31

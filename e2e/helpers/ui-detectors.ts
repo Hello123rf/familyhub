@@ -21,6 +21,15 @@ export interface LayoutProbeResult {
   viewportH: number;
   /** Horizontal pixels the document scrolls beyond the viewport (0 = none). */
   pageOverflowX: number;
+  /**
+   * Vertical pixels the document scrolls beyond the viewport (0 = none).
+   *
+   * Reported, not graded: most routes scroll vertically by design. It matters
+   * on the dashboard, which is built to fit exactly — a display scale that
+   * grows this proportionally means the bottom of the board is off the screen
+   * on a display nobody can scroll.
+   */
+  pageOverflowY: number;
   /** Elements pushed off the right edge, worst first (max 8). */
   overflowers: Overflower[];
   /** True when the fixed side/portrait nav is clipped or spills the viewport. */
@@ -34,6 +43,7 @@ export function layoutProbe(tolerance: number): LayoutProbeResult {
   const vh = window.innerHeight;
   const doc = document.documentElement;
   const pageOverflowX = Math.max(0, doc.scrollWidth - vw);
+  const pageOverflowY = Math.max(0, doc.scrollHeight - vh);
 
   const describe = (el: Element): string => {
     const e = el as HTMLElement;
@@ -107,6 +117,7 @@ export function layoutProbe(tolerance: number): LayoutProbeResult {
     viewportW: vw,
     viewportH: vh,
     pageOverflowX: Math.round(pageOverflowX),
+    pageOverflowY: Math.round(pageOverflowY),
     overflowers: overflowers.slice(0, 8),
     navClipped,
     navDetail,
