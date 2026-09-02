@@ -4,6 +4,9 @@ All notable changes to Prism are documented in this file.
 
 ## Unreleased
 
+### Changed
+- **The per-display text size setting is now called *Text Size*, sits near the bottom of Settings, and starts collapsed.** Reading a dashboard from right across a room is a real situation but an uncommon one, and the control was sitting open near the top of Settings for everyone in order to serve the few who need it. It stays expanded on any display where it has been changed from 100%, so a screen you have already tuned never hides that from you.
+
 ### Fixed
 - **The screensaver no longer covers Away or Babysitter mode.** Both put a full screen up deliberately, and both matter most when nobody is standing at the display — which is exactly when the screensaver used to slide over the top of them. A home left in Away mode showed photos instead of the away screen, and a babysitter's notes disappeared after a couple of minutes with nobody there to touch the screen and bring them back. Being idle now yields to both.
 
@@ -16,7 +19,7 @@ All notable changes to Prism are documented in this file.
 - **Prism no longer downloads ~4 MB of emoji font up front.** The offline cache was told to fetch every font in the build the moment it installed, including all ten chunks of the colour-emoji fallback — undoing the careful arrangement that only fetches the emoji ranges a screen actually draws. Emoji are unchanged; they now arrive when something needs them. First load drops from about 4 MB of fonts to about 210 KB.
 - **The per-display *Font Scale* setting is now called *Text size*.** It only ever set how large the dashboard reads from where the screen is viewed, and the old name described the mechanism rather than the decision. Nothing about your displays changes — the setting keeps its value, it is only labelled more plainly, and it now says out loud that larger text means fewer rows fit.
 - **Turning up the display text size no longer pushes the dashboard off the screen.** The setting made text bigger and the board taller in equal measure, so at 150% the bottom widget was simply below the edge of the screen — on a display nobody can scroll. The dashboard now re-fits itself as the text grows: fewer rows, all of them on screen. Nobody's saved scale changes, and a display that was overflowing stops.
-- **Text is the right size again on a display with no mouse or touchscreen.** Prism picks its text size from what it can tell about the screen it is on, and a display with no pointing device attached — a Pi or a streaming stick driving a wall panel — fell through to the size meant for a phone held at arm's length. That is the one kind of screen guaranteed to be read from across a room, and it was getting nearly the smallest text Prism has. It now scales up with the screen the way a touchscreen already did. If you turned the text size up under *Settings → Displays* to work around this, you will want to bring it back down.
+- **Text is the right size again on a display with no mouse or touchscreen.** Prism picks its text size from what it can tell about the screen it is on, and a display with no pointing device attached — a Pi or a streaming stick driving a wall panel — fell through to the size meant for a phone held at arm's length. That is the one kind of screen guaranteed to be read from across a room, and it was getting nearly the smallest text Prism has. It now scales up with the screen the way a touchscreen already did. If you turned the text size up under *Settings → Text Size* to work around this, you will want to bring it back down.
 
 ## [1.21.0] – 2026-08-31
 
