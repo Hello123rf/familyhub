@@ -5,9 +5,6 @@ All notable changes to Prism are documented in this file.
 ## Unreleased
 
 ### Fixed
-- **Text keeps up with the screen on large panels.** The dashboard's widgets already grow to fill whatever screen they are on, but the text stopped growing at 1920 wide. On a 4K panel that meant boxes four times the area holding text of exactly the same size — and since a 4K and a 1080p panel of the same measurement are the same size in the room, that text was physically half as big to read. It now scales with the screen. Nothing changes at 1920 or below.
-
-### Fixed
 - **A theme installed from the gallery no longer flashes the default palette on every load.** Built-in palettes were drawn correctly from the first frame, but a theme you installed yourself was not: the page rendered in Prism's own colours and only corrected itself a moment later. The same fix that stopped built-in themes flashing now covers installed ones.
 - **The dashboard no longer shifts as it finishes loading.** Prism ships a stand-in font whose letter widths are matched to the real one, so that text does not jump when the real font arrives. It was being built and then skipped over, so every cold start nudged the whole layout by a few percent as it settled. Most noticeable on a wall display, which reloads on its own.
 - **Pages that remember a view no longer redraw themselves on every load.** Restoring a saved grouping or filter made the browser throw away the page it had just been sent and build it again, so a display briefly showed the ungrouped list before settling. Nothing looked broken, which is why it went unnoticed. Tasks was affected as well as the pages above.
