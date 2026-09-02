@@ -3,6 +3,8 @@
 import * as React from 'react';
 import { useState, useEffect, useMemo } from 'react';
 import { useIdleDetection } from '@/lib/hooks/useIdleDetection';
+import { useAwayMode } from '@/lib/hooks/useAwayMode';
+import { useBabysitterMode } from '@/lib/hooks/useBabysitterMode';
 import { usePhotos } from '@/lib/hooks/usePhotos';
 import { useAutoOrientationSetting, usePinnedPhoto, useScreensaverInterval } from '@/components/layout/WallpaperBackground';
 import { useScreenOrientation } from '@/lib/hooks/useScreenOrientation';
@@ -14,6 +16,7 @@ import { GRID_COLS } from '@/lib/constants/grid';
 import { CssGridDisplay } from '@/components/layout/grid/CssGridDisplay';
 import { CalendarPrefsScopeContext } from '@/lib/hooks/useCalendarWidgetPrefs';
 import { loadScreensaverLayout } from './screensaverStorage';
+import { shouldShowScreensaver } from './shouldShowScreensaver';
 
 /**
  * Wrapper classes that make any dashboard widget legible as a screensaver
@@ -41,7 +44,19 @@ export {
 } from './screensaverStorage';
 
 export function Screensaver() {
-  const { isIdle } = useIdleDetection();
+  const { isIdle: idleNow } = useIdleDetection();
+  // Away and Babysitter are deliberate, someone-chose-this states, and each
+  // puts its own full-screen overlay up. The screensaver is rendered after both
+  // in LazyOverlays, so on an untouched display it simply covered them: a home
+  // left in Away mode showed holiday photos instead of the away screen, and the
+  // babysitter's information disappeared behind them exactly when nobody was
+  // there to touch the screen and bring it back.
+  //
+  // Idleness is the weakest of the three signals — it means only that nobody
+  // has touched anything — so it yields to both.
+  const { isAway } = useAwayMode();
+  const { isActive: isBabysitter } = useBabysitterMode();
+  const isIdle = shouldShowScreensaver({ idle: idleNow, away: isAway, babysitter: isBabysitter });
   const { enabled: autoOrientation } = useAutoOrientationSetting();
   const { pinnedId } = usePinnedPhoto('screensaver');
   const { interval: screensaverInterval } = useScreensaverInterval();

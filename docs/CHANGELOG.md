@@ -5,7 +5,7 @@ All notable changes to Prism are documented in this file.
 ## Unreleased
 
 ### Fixed
-- **Text keeps up with the screen on large panels.** The dashboard's widgets already grow to fill whatever screen they are on, but the text stopped growing at 1920 wide. On a 4K panel that meant boxes four times the area holding text of exactly the same size — and since a 4K and a 1080p panel of the same measurement are the same size in the room, that text was physically half as big to read. It now scales with the screen. Nothing changes at 1920 or below.
+- **The screensaver no longer covers Away or Babysitter mode.** Both put a full screen up deliberately, and both matter most when nobody is standing at the display — which is exactly when the screensaver used to slide over the top of them. A home left in Away mode showed photos instead of the away screen, and a babysitter's notes disappeared after a couple of minutes with nobody there to touch the screen and bring them back. Being idle now yields to both.
 
 ### Fixed
 - **A theme installed from the gallery no longer flashes the default palette on every load.** Built-in palettes were drawn correctly from the first frame, but a theme you installed yourself was not: the page rendered in Prism's own colours and only corrected itself a moment later. The same fix that stopped built-in themes flashing now covers installed ones.

@@ -137,27 +137,19 @@
     }
   }
 
-  /* Above this the ladder stops stepping and starts scaling.
-     
-     Grid cells are measured and size themselves continuously, so on a bigger
-     panel they simply get bigger. Text did not: it hit 22px here and stopped,
-     so a 4K panel drew boxes four times the area of a 1080p one holding text
-     of exactly the same size. Measured drift in the text-to-row ratio across
-     1366 -> 3840 was 268%, all of it above 1920.
-     
-     That is also the physically wrong answer. A 4K and a 1080p panel of the
-     same diagonal are the same size in the room, so 22px on the 4K is half as
-     large to whoever is reading it; it should roughly double, not hold.
-     
-     Tracks the SMALLER of the two axes so an ultrawide, where the width grows
-     but the rows do not, does not get text sized for a screen it does not
-     have. Tuned to land on exactly 22px at 1920x1080, so nothing at or below
-     that resolution moves; the clamp floor holds the old value down to 1400
-     and the ceiling stops it running away past 4K. */
   @media (min-width: 1400px) and (pointer: coarse),
     (min-width: 1400px) and (pointer: none) {
     html {
-      font-size: clamp(22px, min(1.1458vw, 2.037vh), 44px);
+      /* Flat, not scaled with the viewport. Making this continuous does fix a
+         real problem — above 1920 the boxes keep growing and the text does not,
+         so a 4K panel draws boxes four times the area holding text of the same
+         size (measured: 142% drift in the text-to-row ratio, 1920 -> 3840).
+         But the screensaver renders the same layout in `containMode`, whose
+         cell size is pure geometry with no root dependency, so a larger root
+         put bigger text into identically sized cells and pushed its content off
+         the screen. Fixing it here without fixing contain mode first trades a
+         subtle problem for a visible one. See PR #360 for the measurements. */
+      font-size: 22px;
     }
   }
 
