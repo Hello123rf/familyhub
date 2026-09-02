@@ -5,6 +5,9 @@ All notable changes to Prism are documented in this file.
 ## Unreleased
 
 ### Fixed
+- **The screensaver no longer covers Away or Babysitter mode.** Both put a full screen up deliberately, and both matter most when nobody is standing at the display — which is exactly when the screensaver used to slide over the top of them. A home left in Away mode showed photos instead of the away screen, and a babysitter's notes disappeared after a couple of minutes with nobody there to touch the screen and bring them back. Being idle now yields to both.
+
+### Fixed
 - **A theme installed from the gallery no longer flashes the default palette on every load.** Built-in palettes were drawn correctly from the first frame, but a theme you installed yourself was not: the page rendered in Prism's own colours and only corrected itself a moment later. The same fix that stopped built-in themes flashing now covers installed ones.
 - **The dashboard no longer shifts as it finishes loading.** Prism ships a stand-in font whose letter widths are matched to the real one, so that text does not jump when the real font arrives. It was being built and then skipped over, so every cold start nudged the whole layout by a few percent as it settled. Most noticeable on a wall display, which reloads on its own.
 - **Pages that remember a view no longer redraw themselves on every load.** Restoring a saved grouping or filter made the browser throw away the page it had just been sent and build it again, so a display briefly showed the ungrouped list before settling. Nothing looked broken, which is why it went unnoticed. Tasks was affected as well as the pages above.
