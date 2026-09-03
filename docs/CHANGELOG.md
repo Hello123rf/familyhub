@@ -4,6 +4,9 @@ All notable changes to Prism are documented in this file.
 
 ## Unreleased
 
+### Fixed
+- **The unlock screen no longer shows the same person twice.** Choosing who you are when leaving Away mode, leaving Babysitter mode, or opening Settings could draw one parent's picture next to another parent's name, so it looked as though somebody appeared twice and somebody else was missing. Signing in still worked; only the pictures were shuffled. Present since 1.10.0 and easy to miss on a household with one parent.
+
 ## [1.22.0] – 2026-09-03
 
 ### Added
