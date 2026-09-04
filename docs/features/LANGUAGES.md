@@ -26,8 +26,7 @@ translation is perfectly usable.
 | Navigation (sidebar, portrait nav, mobile nav) | ✅ done |
 | Common actions (Save, Cancel, Delete, …) | ✅ keys ready |
 | Birthdays widget | ✅ done |
-| Calendar - views, toolbar, widget | ✅ done |
-| Calendar - add/edit event form | ⬜ to do |
+| Calendar - views, toolbar, widget, add/edit event form | ✅ done |
 | Chores — widget + page | ⬜ to do |
 | Meals — widget + page | ⬜ to do |
 | Messages — widget + page | ⬜ to do |

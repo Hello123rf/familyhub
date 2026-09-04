@@ -119,6 +119,41 @@
       "deleteConfirmTitle": "Diesen Termin löschen?",
       "deleteConfirmBody": "Soll dieser Termin wirklich gelöscht werden?"
     },
+    "eventForm": {
+      "titleNew": "Neuer Termin",
+      "titleEdit": "Termin bearbeiten",
+      "descriptionNew": "Einen neuen Kalendertermin erstellen.",
+      "descriptionEdit": "Termindetails aktualisieren.",
+      "titlePlaceholder": "Titel hinzufügen",
+      "startDate": "Startdatum",
+      "endDate": "Enddatum",
+      "selectCalendar": "Kalender auswählen",
+      "syncHint": "Lokale Kalender bleiben auf diesem Dashboard. Verbundene Kalender (etwa Google) werden in beide Richtungen synchronisiert.",
+      "moreOptions": "Weitere Optionen",
+      "lessOptions": "Weniger Optionen",
+      "locationPlaceholder": "Ort hinzufügen",
+      "descriptionPlaceholder": "Beschreibung hinzufügen",
+      "noReminder": "Keine Erinnerung",
+      "saving": "Wird gespeichert …",
+      "timePlaceholder": "Uhrzeit",
+      "timeHint": "z. B. 14:30",
+      "savedLocally": "Termin lokal gespeichert",
+      "endBeforeStart": "Das Ende muss nach dem Beginn liegen",
+      "saveFailed": "Termin konnte nicht gespeichert werden",
+      "recurrence": {
+        "none": "Wiederholt sich nicht",
+        "daily": "Täglich",
+        "weekly": "Wöchentlich",
+        "weekdays": "Jeden Wochentag",
+        "monthly": "Monatlich",
+        "yearly": "Jährlich"
+      },
+      "reminder": {
+        "minutesBefore": "{count, plural, one {# Minute vorher} other {# Minuten vorher}}",
+        "hoursBefore": "{count, plural, one {# Stunde vorher} other {# Stunden vorher}}",
+        "daysBefore": "{count, plural, one {# Tag vorher} other {# Tage vorher}}"
+      }
+    },
     "pending": {
       "title": "Löschungen prüfen",
       "explain": "Diese Termine wurden aus ihrem Quellkalender entfernt und zur Prüfung zurückgehalten. <b>Löschen</b> entfernt sie auch aus Prism. <b>Behalten</b> überträgt sie in den <local>lokalen Kalender</local>. Sie werden dann nicht mehr synchronisiert und bleiben erhalten.",

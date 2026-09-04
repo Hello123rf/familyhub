@@ -119,6 +119,41 @@
       "deleteConfirmTitle": "Delete this event?",
       "deleteConfirmBody": "Are you sure you want to delete this event?"
     },
+    "eventForm": {
+      "titleNew": "New Event",
+      "titleEdit": "Edit Event",
+      "descriptionNew": "Create a new calendar event.",
+      "descriptionEdit": "Update event details.",
+      "titlePlaceholder": "Add title",
+      "startDate": "Start date",
+      "endDate": "End date",
+      "selectCalendar": "Select a calendar",
+      "syncHint": "Local calendars stay on this dashboard. Connected calendars (like Google) sync both ways.",
+      "moreOptions": "More options",
+      "lessOptions": "Less options",
+      "locationPlaceholder": "Add location",
+      "descriptionPlaceholder": "Add description",
+      "noReminder": "No reminder",
+      "saving": "Saving...",
+      "timePlaceholder": "Time",
+      "timeHint": "e.g. 2:30 PM",
+      "savedLocally": "Event saved locally",
+      "endBeforeStart": "End must be after start",
+      "saveFailed": "Failed to save event",
+      "recurrence": {
+        "none": "Does not repeat",
+        "daily": "Daily",
+        "weekly": "Weekly",
+        "weekdays": "Every weekday",
+        "monthly": "Monthly",
+        "yearly": "Yearly"
+      },
+      "reminder": {
+        "minutesBefore": "{count, plural, one {# minute before} other {# minutes before}}",
+        "hoursBefore": "{count, plural, one {# hour before} other {# hours before}}",
+        "daysBefore": "{count, plural, one {# day before} other {# days before}}"
+      }
+    },
     "pending": {
       "title": "Review removals",
       "explain": "These events were removed from their source calendar and held for review. <b>Delete</b> removes them from Prism too. <b>Keep</b> transfers each one to your <local>local calendar</local> — it stops syncing and stays put.",
