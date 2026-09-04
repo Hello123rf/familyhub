@@ -7,7 +7,9 @@ import { cn } from '@/lib/utils';
 import { WeekItemCard, type WeekItemSize, type WeekItemLayout } from './WeekItemCard';
 import { weatherIcon } from './weatherIcon';
 import type { DayBucket } from '@/lib/hooks/useWeekViewData';
+import { useTranslations } from 'next-intl';
 import { useTimeFormat } from '@/components/providers';
+import { useDateLabels, type DateLabels } from '@/lib/hooks/useDateLabels';
 import { formatDisplayTime, toDisplayDate, type TimeFormat } from '@/lib/utils/timeFormat';
 
 const PRIORITY_COLORS = {
@@ -40,15 +42,27 @@ function mealStripeColor(meal: {
   return meal.cookedBy?.color || meal.createdBy?.color || MEAL_FALLBACK_COLOR;
 }
 
-function dayLabel(date: Date, displayTimezone: string): string {
+function dayLabel(
+  date: Date,
+  displayTimezone: string,
+  t: (key: string) => string,
+  d: DateLabels,
+): string {
   const displayNow = toDisplayDate(new Date(), displayTimezone);
-  if (isSameDay(date, displayNow)) return 'Today';
-  if (isSameDay(date, new Date(displayNow.getFullYear(), displayNow.getMonth(), displayNow.getDate() + 1))) return 'Tomorrow';
-  return format(date, 'EEEE');
+  if (isSameDay(date, displayNow)) return t('today');
+  if (isSameDay(date, new Date(displayNow.getFullYear(), displayNow.getMonth(), displayNow.getDate() + 1))) return t('tomorrow');
+  return d.weekdayLong(date);
 }
 
-function timeLabel(start: Date, end: Date, allDay: boolean, timeFormat: TimeFormat, displayTimezone: string): string | undefined {
-  if (allDay) return 'All day';
+function timeLabel(
+  start: Date,
+  end: Date,
+  allDay: boolean,
+  timeFormat: TimeFormat,
+  displayTimezone: string,
+  t: (key: string) => string,
+): string | undefined {
+  if (allDay) return t('allDay');
   const startStr = formatDisplayTime(start, timeFormat, {}, displayTimezone);
   if (!isSameDay(toDisplayDate(start, displayTimezone), toDisplayDate(end, displayTimezone))) return startStr;
   return startStr;
@@ -151,6 +165,8 @@ export function DayColumn({
   className,
 }: DayColumnProps) {
   const { timeFormat, displayTimezone } = useTimeFormat();
+  const t = useTranslations('calendar');
+  const d = useDateLabels();
   const flags = { ...ALL_OVERLAYS, ...overlays };
   const today = isSameDay(bucket.date, toDisplayDate(new Date(), displayTimezone));
   const droppableId = format(bucket.date, 'yyyy-MM-dd');
@@ -196,7 +212,7 @@ export function DayColumn({
                 : 'text-muted-foreground',
             )}
           >
-            {dayLabel(bucket.date, displayTimezone)}
+            {dayLabel(bucket.date, displayTimezone, t, d)}
           </span>
         </div>
         {profile.showWeather && bucket.weather && (
@@ -218,7 +234,7 @@ export function DayColumn({
             layout={itemLayout}
             stripeColor={event.color}
             title={event.title}
-            timeLabel="All day"
+            timeLabel={t('allDay')}
             subtitle={event.calendarName}
           />
         ))}
@@ -232,7 +248,7 @@ export function DayColumn({
             layout={itemLayout}
             stripeColor={event.color}
             title={event.title}
-            timeLabel={timeLabel(event.startTime, event.endTime, false, timeFormat, displayTimezone)}
+            timeLabel={timeLabel(event.startTime, event.endTime, false, timeFormat, displayTimezone, t)}
             subtitle={event.location || event.calendarName}
           />
         ))}
@@ -284,7 +300,7 @@ export function DayColumn({
             stripeColor={mealStripeColor(meal)}
             title={meal.name}
             timeLabel={meal.mealType}
-            subtitle={meal.cookedBy?.name ? `Cooked by ${meal.cookedBy.name}` : undefined}
+            subtitle={meal.cookedBy?.name ? t('cookedBy', { name: meal.cookedBy.name }) : undefined}
             muted={Boolean(meal.cookedAt)}
             dragId={disableDrop ? undefined : `meal:${meal.id}`}
           />
@@ -292,7 +308,7 @@ export function DayColumn({
 
       {profile.showEmptyState && isEmpty && (
         <div className="flex flex-1 items-center justify-center rounded border border-dashed border-border/30 bg-black/10 py-3 text-[10px] text-muted-foreground">
-          Nothing planned
+          {t('nothingPlanned')}
         </div>
       )}
     </div>

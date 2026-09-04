@@ -1,12 +1,13 @@
 'use client';
 
 import * as React from 'react';
-import { format } from 'date-fns';
+import { useTranslations } from 'next-intl';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import type { CalendarEvent } from '@/types/calendar';
 import { useTimeFormat } from '@/components/providers';
 import { formatDisplayTime, isCalendarEventPast } from '@/lib/utils/timeFormat';
+import { useDateLabels } from '@/lib/hooks/useDateLabels';
 
 interface DayOverflowPopoverProps {
   /** The date this popover represents — shown in the popover header. */
@@ -31,6 +32,8 @@ export function DayOverflowPopover({
   triggerClassName,
 }: DayOverflowPopoverProps) {
   const { timeFormat, displayTimezone } = useTimeFormat();
+  const t = useTranslations('calendar');
+  const d = useDateLabels();
   const [open, setOpen] = React.useState(false);
 
   if (hiddenEvents.length === 0) return null;
@@ -49,7 +52,7 @@ export function DayOverflowPopover({
             triggerClassName,
           )}
         >
-          + {hiddenEvents.length} more
+          {t('moreEvents', { count: hiddenEvents.length })}
         </button>
       </PopoverTrigger>
       <PopoverContent
@@ -58,7 +61,7 @@ export function DayOverflowPopover({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="text-xs font-semibold text-muted-foreground mb-2">
-          {format(date, 'EEEE, MMM d')}
+          {d.weekdayLongMonthDay(date)}
         </div>
         <ul className="space-y-1 list-none m-0 p-0">
           {hiddenEvents.map((event) => (

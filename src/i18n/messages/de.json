@@ -32,6 +32,113 @@
       "loading": "Wird geladen"
     }
   },
+  "calendar": {
+    "title": "Kalender",
+    "upcoming": "Anstehende Termine",
+    "today": "Heute",
+    "tomorrow": "Morgen",
+    "allDay": "Ganztägig",
+    "continues": "Läuft weiter",
+    "chore": "Hausarbeit",
+    "task": "Aufgabe",
+    "nothingPlanned": "Nichts geplant",
+    "noUpcomingEvents": "Keine anstehenden Termine",
+    "moreEvents": "+ {count} weitere",
+    "moreItems": "+{count} weitere Einträge",
+    "dayHeader": "{label} – {date}",
+    "dateAtTime": "{date} um {time}",
+    "notesPlaceholder": "Notizen hinzufügen …",
+    "notes": "Notizen",
+    "showAllHours": "Alle Stunden anzeigen",
+    "hideTimeBlock": "Zeitblock ausblenden",
+    "cookedBy": "Gekocht von {name}",
+    "nav": {
+      "previous": "Zurück",
+      "next": "Weiter",
+      "previousView": "Vorherige Ansicht",
+      "nextView": "Nächste Ansicht",
+      "calendarView": "Kalenderansicht"
+    },
+    "views": {
+      "agenda": "Agenda",
+      "day": "Tag",
+      "list": "Liste",
+      "schedule": "Zeitplan",
+      "week1": "1 Woche",
+      "week2": "2 Wochen",
+      "week3": "3 Wochen",
+      "week4": "4 Wochen",
+      "month": "Monat",
+      "threeMonth": "3 Monate",
+      "week1Short": "1 Wo.",
+      "week2Short": "2 Wo.",
+      "week3Short": "3 Wo.",
+      "week4Short": "4 Wo."
+    },
+    "options": {
+      "trigger": "Ansicht",
+      "label": "Ansichtsoptionen",
+      "display": "Darstellung",
+      "cards": "Karten",
+      "inlineBlocks": "Inline-Blöcke",
+      "gridLines": "Gitternetzlinien",
+      "hideWeekends": "Wochenenden ausblenden",
+      "notesColumn": "Notizspalte",
+      "mergeCalendars": "Kalender zusammenführen",
+      "showOnCalendar": "Im Kalender anzeigen",
+      "events": "Termine",
+      "meals": "Mahlzeiten",
+      "chores": "Hausarbeiten",
+      "tasks": "Aufgaben",
+      "cardsHint": "Zur Kartenansicht wechseln, um Mahlzeiten, Hausarbeiten und Aufgaben neben den Terminen anzuzeigen.",
+      "reset": "Auf Standard zurücksetzen"
+    },
+    "toolbar": {
+      "manage": "Verwalten",
+      "manageCalendars": "Kalender verwalten",
+      "addEvent": "Termin hinzufügen",
+      "addEventAuth": "Zum Hinzufügen eines Termins bitte anmelden",
+      "review": "{count} prüfen",
+      "reviewTitle": "Zurückgehaltene Kalender-Löschungen prüfen",
+      "show": "Anzeigen:",
+      "all": "Alle",
+      "allCalendars": "Alle Kalender",
+      "filterCalendars": "Kalender filtern",
+      "merge": "Zusammenführen",
+      "split": "Aufteilen",
+      "mergeHint": "In eine Spalte zusammenführen",
+      "splitHint": "Nach Kalender aufteilen",
+      "resizeForView": "Für die Ansicht „{view}“ das Widget vergrößern"
+    },
+    "empty": {
+      "title": "Noch kein Kalender verbunden",
+      "description": "Google, Apple, Outlook oder einen beliebigen iCal-Link verbinden, um hier Termine zu sehen.",
+      "action": "Kalender verbinden"
+    },
+    "event": {
+      "deleteConfirmTitle": "Diesen Termin löschen?",
+      "deleteConfirmBody": "Soll dieser Termin wirklich gelöscht werden?"
+    },
+    "pending": {
+      "title": "Löschungen prüfen",
+      "explain": "Diese Termine wurden aus ihrem Quellkalender entfernt und zur Prüfung zurückgehalten. <b>Löschen</b> entfernt sie auch aus Prism. <b>Behalten</b> überträgt sie in den <local>lokalen Kalender</local>. Sie werden dann nicht mehr synchronisiert und bleiben erhalten.",
+      "selectAll": "Alle auswählen ({selected}/{total})",
+      "localIfKept": "Lokal (falls behalten)",
+      "keep": "{count} lokal behalten",
+      "delete": "{count} löschen"
+    },
+    "errors": {
+      "loadFailed": "Kalender konnte nicht geladen werden: {error}",
+      "moveFailed": "Element konnte nicht verschoben werden",
+      "deleteFailed": "Termin konnte nicht gelöscht werden",
+      "updateTaskFailed": "Aufgabe konnte nicht aktualisiert werden",
+      "updateMealFailed": "Mahlzeit konnte nicht aktualisiert werden",
+      "pageTitle": "Kalenderfehler",
+      "pageBody": "Der Kalender konnte nicht geladen werden. Bitte erneut versuchen.",
+      "tryAgain": "Erneut versuchen",
+      "backToDashboard": "Zurück zur Übersicht"
+    }
+  },
   "birthdays": {
     "title": "Anstehende Geburtstage & Meilensteine",
     "empty": "Keine anstehenden Geburtstage oder Meilensteine",

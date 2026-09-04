@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { useState, useRef, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { Filter } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { contrastText } from '@/lib/utils/color';
@@ -18,6 +19,7 @@ export function CalendarFilterPopover({
   selectedCalendarIds,
   onToggle,
 }: CalendarFilterPopoverProps) {
+  const t = useTranslations('calendar.toolbar');
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -45,7 +47,7 @@ export function CalendarFilterPopover({
           'p-1 rounded hover:bg-accent transition-colors',
           open && 'bg-accent'
         )}
-        aria-label="Filter calendars"
+        aria-label={t('filterCalendars')}
       >
         <Filter className="h-3.5 w-3.5" />
       </button>
@@ -62,7 +64,7 @@ export function CalendarFilterPopover({
                 : 'hover:bg-accent text-muted-foreground'
             )}
           >
-            All Calendars
+            {t('allCalendars')}
           </button>
 
           <div className="border-t border-border my-1" />

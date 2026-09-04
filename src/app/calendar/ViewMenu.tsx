@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useTranslations } from 'next-intl';
 import {
   Calendar,
   CalendarDays,
@@ -35,8 +36,8 @@ interface ViewMenuProps {
 }
 
 interface ViewOption {
-  /** Label shown in trigger AND menu. */
-  label: string;
+  /** Key into the `calendar.views` catalogue. Shown in trigger AND menu. */
+  labelKey: string;
   /** Icon shown alongside the label. */
   Icon: typeof Calendar;
   /** Returns true when this option matches the current view state. */
@@ -50,61 +51,61 @@ interface ViewOption {
 
 const OPTIONS: ViewOption[] = [
   {
-    label: 'Agenda',
+    labelKey: 'agenda',
     Icon: ListChecks,
     isActive: (v) => v === 'agenda',
     apply: (setView) => setView('agenda'),
   },
   {
-    label: 'Day',
+    labelKey: 'day',
     Icon: CalendarDays,
     isActive: (v) => v === 'day',
     apply: (setView) => setView('day'),
   },
   {
-    label: 'List',
+    labelKey: 'list',
     Icon: List,
     isActive: (v) => v === 'weekVertical',
     apply: (setView) => setView('weekVertical'),
   },
   {
-    label: 'Schedule',
+    labelKey: 'schedule',
     Icon: Clock,
     isActive: (v) => v === 'week',
     apply: (setView) => setView('week'),
   },
   {
-    label: '1 Week',
+    labelKey: 'week1',
     Icon: CalendarRange,
     isActive: (v, wc) => v === 'multiWeek' && wc === 1,
     apply: (setView, setWeekCount) => { setView('multiWeek'); setWeekCount(1); },
   },
   {
-    label: '2 Weeks',
+    labelKey: 'week2',
     Icon: CalendarRange,
     isActive: (v, wc) => v === 'multiWeek' && wc === 2,
     apply: (setView, setWeekCount) => { setView('multiWeek'); setWeekCount(2); },
   },
   {
-    label: '3 Weeks',
+    labelKey: 'week3',
     Icon: CalendarRange,
     isActive: (v, wc) => v === 'multiWeek' && wc === 3,
     apply: (setView, setWeekCount) => { setView('multiWeek'); setWeekCount(3); },
   },
   {
-    label: '4 Weeks',
+    labelKey: 'week4',
     Icon: CalendarRange,
     isActive: (v, wc) => v === 'multiWeek' && wc === 4,
     apply: (setView, setWeekCount) => { setView('multiWeek'); setWeekCount(4); },
   },
   {
-    label: 'Month',
+    labelKey: 'month',
     Icon: LayoutGrid,
     isActive: (v) => v === 'month',
     apply: (setView) => setView('month'),
   },
   {
-    label: '3 Months',
+    labelKey: 'threeMonth',
     Icon: Grid3X3,
     isActive: (v) => v === 'threeMonth',
     apply: (setView) => setView('threeMonth'),
@@ -112,6 +113,7 @@ const OPTIONS: ViewOption[] = [
 ];
 
 export function ViewMenu({ viewType, weekCount, onViewChange, onWeekCountChange }: ViewMenuProps) {
+  const t = useTranslations('calendar');
   const [open, setOpen] = React.useState(false);
   const activeIndex = Math.max(
     0,
@@ -138,7 +140,7 @@ export function ViewMenu({ viewType, weekCount, onViewChange, onWeekCountChange 
         <PopoverTrigger asChild>
           <Button variant="outline" size="sm" className="gap-1.5 w-32 h-full justify-center">
             <ActiveIcon className="h-4 w-4 shrink-0" />
-            <span className="truncate">{active.label}</span>
+            <span className="truncate">{t(`views.${active.labelKey}`)}</span>
             <ChevronDown className="h-3.5 w-3.5 opacity-60 shrink-0" />
           </Button>
         </PopoverTrigger>
@@ -148,7 +150,7 @@ export function ViewMenu({ viewType, weekCount, onViewChange, onWeekCountChange 
             const isActive = opt.isActive(viewType, weekCount);
             return (
               <button
-                key={opt.label}
+                key={opt.labelKey}
                 type="button"
                 onClick={() => {
                   opt.apply(onViewChange, onWeekCountChange);
@@ -161,7 +163,7 @@ export function ViewMenu({ viewType, weekCount, onViewChange, onWeekCountChange 
                 )}
               >
                 <Icon className="h-4 w-4 shrink-0" />
-                <span className="flex-1 text-left">{opt.label}</span>
+                <span className="flex-1 text-left">{t(`views.${opt.labelKey}`)}</span>
               </button>
             );
           })}
@@ -170,8 +172,8 @@ export function ViewMenu({ viewType, weekCount, onViewChange, onWeekCountChange 
       <div className="grid grid-rows-2 gap-0.5 w-7 h-full">
         <button
           type="button"
-          aria-label="Previous view"
-          title="Previous view"
+          aria-label={t('nav.previousView')}
+          title={t('nav.previousView')}
           onClick={() => cycle(-1)}
           className="rounded border border-input hover:bg-accent inline-flex items-center justify-center text-foreground/80 hover:text-foreground transition-colors min-h-0"
         >
@@ -179,8 +181,8 @@ export function ViewMenu({ viewType, weekCount, onViewChange, onWeekCountChange 
         </button>
         <button
           type="button"
-          aria-label="Next view"
-          title="Next view"
+          aria-label={t('nav.nextView')}
+          title={t('nav.nextView')}
           onClick={() => cycle(1)}
           className="rounded border border-input hover:bg-accent inline-flex items-center justify-center text-foreground/80 hover:text-foreground transition-colors min-h-0"
         >

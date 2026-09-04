@@ -26,6 +26,7 @@ import {
   toDisplayDate,
 } from '@/lib/utils/timeFormat';
 import { eventsOverlappingRange } from '@/lib/utils/calendarRange';
+import { useDateLabels } from '@/lib/hooks/useDateLabels';
 
 export interface WeekVerticalViewProps {
   currentDate: Date;
@@ -183,6 +184,7 @@ function WeekListDayRow({
   onItemClick: ((ref: OverlayItemRef) => void) | undefined;
 }) {
   const { displayTimezone } = useTimeFormat();
+  const d = useDateLabels();
   const cards = displayMode === 'cards';
   const dayStart = startOfDay(day);
   const isCurrentDay = isSameDay(day, today);
@@ -230,7 +232,7 @@ function WeekListDayRow({
           'text-xs font-medium uppercase tracking-wide',
           isCurrentDay ? 'text-primary-foreground' : 'text-muted-foreground'
         )}>
-          {format(day, 'EEE')}
+          {d.weekdayShort(day)}
         </span>
         <span className={cn(
           'text-2xl font-bold leading-tight',
@@ -242,7 +244,7 @@ function WeekListDayRow({
           'text-[10px]',
           isCurrentDay ? 'text-primary-foreground/80' : 'text-muted-foreground'
         )}>
-          {format(day, 'MMM')}
+          {d.monthShort(day)}
         </span>
       </div>
 

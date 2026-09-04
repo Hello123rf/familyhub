@@ -8,6 +8,7 @@
  * groups, hours, iCal subscriptions).
  */
 
+import { useTranslations } from 'next-intl';
 import {
   Dialog,
   DialogContent,
@@ -24,11 +25,13 @@ export function ManageCalendarsModal({
   /** Called after a manual sync so the calendar page can refetch its events. */
   onSynced?: () => void;
 }) {
+  const t = useTranslations('calendar.toolbar');
+
   return (
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="w-[calc(100vw-2rem)] max-w-5xl max-h-[85vh] overflow-y-auto overflow-x-hidden">
         <DialogHeader>
-          <DialogTitle>Manage calendars</DialogTitle>
+          <DialogTitle>{t('manageCalendars')}</DialogTitle>
         </DialogHeader>
         <CalendarsSection onSynced={onSynced} />
       </DialogContent>

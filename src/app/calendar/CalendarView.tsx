@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+import { useDateLabels } from '@/lib/hooks/useDateLabels';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, addDays, addWeeks, startOfDay } from 'date-fns';
 import {
   DndContext,
@@ -86,6 +88,7 @@ function sortMealsByType<T extends { mealType: 'breakfast' | 'lunch' | 'dinner' 
 const MealModal = lazy(() => import('@/app/meals/MealsView').then(m => ({ default: m.MealModal })));
 
 export function CalendarView() {
+  const t = useTranslations('calendar');
   const { activeUser, requireAuth } = useAuth();
   const { members: familyMembers } = useFamily();
   const { weekStartsOn } = useWeekStartsOn();
@@ -322,7 +325,7 @@ export function CalendarView() {
         await moveEvent(itemId, ev.startTime, ev.endTime, targetBucket.date);
       }
     } catch (err) {
-      setMoveError(err instanceof Error ? err.message : 'Failed to move item');
+      setMoveError(err instanceof Error ? err.message : t('errors.moveFailed'));
     }
   };
 
@@ -354,7 +357,7 @@ export function CalendarView() {
   });
 
   const handleAddWithAuth = async () => {
-    const user = await requireAuth('Add Event', 'Please log in to add an event');
+    const user = await requireAuth(t('toolbar.addEvent'), t('toolbar.addEventAuth'));
     if (!user) return;
     setShowAddEvent(true);
   };
@@ -391,20 +394,20 @@ export function CalendarView() {
                 size="sm"
                 onClick={() => setShowPendingReview(true)}
                 className="h-9 border-amber-500/50 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10"
-                title="Review calendar removals held for your approval"
+                title={t('toolbar.reviewTitle')}
               >
                 <AlertTriangle className="h-4 w-4 mr-1" />
-                Review {pendingCount}
+                {t('toolbar.review', { count: pendingCount })}
               </Button>
             )}
             {isMobile ? null : (
               <>
-                <Button variant="outline" size="sm" onClick={goToToday} className="h-9">Today</Button>
+                <Button variant="outline" size="sm" onClick={goToToday} className="h-9">{t('today')}</Button>
                 <div className="flex items-center gap-1">
-                  <Button variant="outline" size="icon" onClick={goToPrevious} aria-label="Previous" className="h-9 w-9">
+                  <Button variant="outline" size="icon" onClick={goToPrevious} aria-label={t('nav.previous')} className="h-9 w-9">
                     <ChevronLeft className="h-5 w-5" />
                   </Button>
-                  <Button variant="outline" size="icon" onClick={goToNext} aria-label="Next" className="h-9 w-9">
+                  <Button variant="outline" size="icon" onClick={goToNext} aria-label={t('nav.next')} className="h-9 w-9">
                     <ChevronRight className="h-5 w-5" />
                   </Button>
                 </div>
@@ -451,13 +454,13 @@ export function CalendarView() {
               />
             </div>
             {!isMobile && (
-              <Button variant="outline" size="sm" onClick={() => setShowManageCalendars(true)} className="h-9" title="Manage calendars">
-                <CalendarCog className="h-4 w-4 mr-1" />Manage
+              <Button variant="outline" size="sm" onClick={() => setShowManageCalendars(true)} className="h-9" title={t('toolbar.manageCalendars')}>
+                <CalendarCog className="h-4 w-4 mr-1" />{t('toolbar.manage')}
               </Button>
             )}
             {!isMobile && (
               <Button size="sm" onClick={handleAddWithAuth}>
-                <Plus className="h-4 w-4 mr-1" />Add Event
+                <Plus className="h-4 w-4 mr-1" />{t('toolbar.addEvent')}
               </Button>
             )}
           </>}
@@ -465,14 +468,14 @@ export function CalendarView() {
 
         {!isMobile && calendarGroups.length > 0 && (
           <FilterBar>
-            <span className="text-sm text-muted-foreground shrink-0">Show:</span>
+            <span className="text-sm text-muted-foreground shrink-0">{t('toolbar.show')}</span>
             <Button
               variant={selectedCalendarIds.has('all') ? 'default' : 'outline'}
               size="sm"
               onClick={() => toggleCalendar('all')}
               className="h-7 text-xs"
             >
-              All
+              {t('toolbar.all')}
             </Button>
             {calendarGroups.map((group) => {
               const isSelected = selectedCalendarIds.has(group.id) || selectedCalendarIds.has('all');
@@ -496,10 +499,10 @@ export function CalendarView() {
                 size="sm"
                 onClick={() => setMergedView(!mergedView)}
                 className="gap-1 ml-auto"
-                title={mergedView ? 'Split by calendar' : 'Merge into one column'}
+                title={mergedView ? t('toolbar.splitHint') : t('toolbar.mergeHint')}
               >
                 <Merge className="h-3.5 w-3.5" />
-                {mergedView ? 'Split' : 'Merge'}
+                {mergedView ? t('toolbar.split') : t('toolbar.merge')}
               </Button>
             )}
           </FilterBar>
@@ -513,18 +516,18 @@ export function CalendarView() {
           )}
           {error && (
             <div className="h-full flex items-center justify-center">
-              <p className="text-destructive">Failed to load calendar: {error}</p>
+              <p className="text-destructive">{t('errors.loadFailed', { error })}</p>
             </div>
           )}
           {!loading && !error && hasNoCalendarSources && (
             <EmptyState
               icon={<CalendarCog />}
-              title="No calendar connected yet"
-              description="Connect Google, Apple, Outlook, or any iCal link to see events here."
+              title={t('empty.title')}
+              description={t('empty.description')}
               action={
                 <Button onClick={() => setShowManageCalendars(true)}>
                   <Plus className="h-4 w-4 mr-1" />
-                  Connect a calendar
+                  {t('empty.action')}
                 </Button>
               }
             />
@@ -718,11 +721,11 @@ export function CalendarView() {
                     listId: updated.listId,
                   }),
                 });
-                if (!res.ok) throw new Error('Failed to update task');
+                if (!res.ok) throw new Error(t('errors.updateTaskFailed'));
                 await refreshAllTasks();
                 await refreshBuckets();
               } catch (err) {
-                toast({ title: err instanceof Error ? err.message : 'Failed to update task', variant: 'destructive' });
+                toast({ title: err instanceof Error ? err.message : t('errors.updateTaskFailed'), variant: 'destructive' });
               } finally {
                 setEditingTask(null);
               }
@@ -745,11 +748,11 @@ export function CalendarView() {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(updates),
                   });
-                  if (!res.ok) throw new Error('Failed to update meal');
+                  if (!res.ok) throw new Error(t('errors.updateMealFailed'));
                   await refreshAllMeals();
                   await refreshBuckets();
                 } catch (err) {
-                  toast({ title: err instanceof Error ? err.message : 'Failed to update meal', variant: 'destructive' });
+                  toast({ title: err instanceof Error ? err.message : t('errors.updateMealFailed'), variant: 'destructive' });
                 } finally {
                   setEditingMeal(null);
                 }
@@ -770,20 +773,23 @@ function EventDetailModal({ event, onClose, onEdit, onDeleted }: {
   onDeleted: () => void;
 }) {
   const { timeFormat, displayTimezone } = useTimeFormat();
+  const t = useTranslations('calendar');
+  const tActions = useTranslations('common.actions');
+  const d = useDateLabels();
   const { confirm, dialogProps } = useConfirmDialog();
 
   const handleDelete = async () => {
-    const ok = await confirm('Delete this event?', 'Are you sure you want to delete this event?');
+    const ok = await confirm(t('event.deleteConfirmTitle'), t('event.deleteConfirmBody'));
     if (!ok) return;
     try {
       const response = await fetch(`/api/events/${event.id}`, { method: 'DELETE' });
       if (!response.ok) {
         const err = await response.json();
-        toast({ title: err.error || 'Failed to delete event', variant: 'destructive' });
+        toast({ title: err.error || t('errors.deleteFailed'), variant: 'destructive' });
         return;
       }
       onDeleted();
-    } catch { toast({ title: 'Failed to delete event', variant: 'destructive' }); }
+    } catch { toast({ title: t('errors.deleteFailed'), variant: 'destructive' }); }
   };
 
   return (
@@ -793,18 +799,21 @@ function EventDetailModal({ event, onClose, onEdit, onDeleted }: {
         <h2 className="text-xl font-bold mb-2">{event.title}</h2>
         <p className="text-sm text-muted-foreground mb-1">
           {event.allDay
-            ? format(toDisplayDate(event.startTime, displayTimezone), 'EEEE, MMMM d')
-            : `${format(toDisplayDate(event.startTime, displayTimezone), 'EEEE, MMMM d')} at ${formatDisplayTime(event.startTime, timeFormat, {}, displayTimezone)}`}
+            ? d.weekdayLongMonthDay(toDisplayDate(event.startTime, displayTimezone))
+            : t('dateAtTime', {
+                date: d.weekdayLongMonthDay(toDisplayDate(event.startTime, displayTimezone)),
+                time: formatDisplayTime(event.startTime, timeFormat, {}, displayTimezone),
+              })}
         </p>
         {event.location && <p className="text-sm text-muted-foreground mb-4">{event.location}</p>}
         <p className="text-xs text-muted-foreground">{event.calendarName}</p>
         <div className="flex justify-between mt-6">
           <Button variant="destructive" onClick={handleDelete}>
-            Delete
+            {tActions('delete')}
           </Button>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={onClose}>Close</Button>
-            <Button onClick={onEdit}>Edit</Button>
+            <Button variant="outline" onClick={onClose}>{tActions('close')}</Button>
+            <Button onClick={onEdit}>{tActions('edit')}</Button>
           </div>
         </div>
       </div>
@@ -841,6 +850,7 @@ function CalendarDragPreview({
   mealColor: string;
 }) {
   const { timeFormat, displayTimezone } = useTimeFormat();
+  const t = useTranslations('calendar');
   const colon = dragId.indexOf(':');
   if (colon === -1) return null;
   const variant = dragId.slice(0, colon) as 'meal' | 'chore' | 'task' | 'event';
@@ -857,7 +867,7 @@ function CalendarDragPreview({
           layout="column"
           stripeColor={ev.color}
           title={ev.title}
-          timeLabel={ev.allDay ? 'All day' : formatDisplayTime(ev.startTime, timeFormat, {}, displayTimezone)}
+          timeLabel={ev.allDay ? t('allDay') : formatDisplayTime(ev.startTime, timeFormat, {}, displayTimezone)}
           subtitle={ev.location || ev.calendarName}
         />
       </div>
