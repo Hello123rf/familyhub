@@ -54,6 +54,7 @@ import { ActivityLogSection } from './sections/ActivityLogSection';
 
 import { DisplaysSection } from './sections/DisplaysSection';
 import { IntegrationsSection } from './sections/integrations/IntegrationsSection';
+import { KioskSection } from './sections/KioskSection';
 
 
 // Exported hooks (consumed by other components)
@@ -192,6 +193,7 @@ export function SettingsView() {
     // Calendar management moved onto the Calendar page (Manage calendars button).
     { id: 'display', label: 'Appearance', icon: Palette },
     { id: 'photos', label: 'Photos', icon: ImageIcon },
+    { id: 'kiosk', label: 'Kindle Kiosk', icon: Monitor },
     { id: 'bus', label: 'Bus Tracking', icon: Bus },
     { id: 'input', label: 'Input', icon: KeyboardIcon },
     { id: 'babysitter', label: 'Babysitter Info', icon: Baby },
@@ -278,6 +280,7 @@ export function SettingsView() {
               {activeSection === 'integrations' && <IntegrationsSection />}
               {activeSection === 'displays' && <DisplaysSection />}
               {activeSection === 'photos' && <PhotosSettingsSection />}
+              {activeSection === 'kiosk' && <KioskSection />}
               {activeSection === 'bus' && <BusTrackingSection />}
               {activeSection === 'babysitter' && <BabysitterInfoSection />}
               {activeSection === 'general' && <GeneralSection />}
