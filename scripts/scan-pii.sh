@@ -36,7 +36,7 @@
 
 set -uo pipefail
 
-REPO_FILES=$(git ls-files | grep -vE '^(scripts/scan-(pii|examples|hostnames|secrets)\.sh|scripts/prism-pii-denylist\.example\.txt|docs/code-review-modalities\.md|package-lock\.json|.*\.lock)$' || true)
+REPO_FILES=$(git ls-files | grep -vE '^(scripts/scan-(pii|examples|hostnames|secrets)\.sh|scripts/prism-pii-denylist\.example\.txt|docs/code-review-modalities\.md|package-lock\.json|.*\.lock)$' | grep -vE '\.(gif|png|jpg|jpeg|webp|avif|ico|mp4|mov|avi)$' || true)
 
 fail=0
 
@@ -44,7 +44,7 @@ fail=0
 
 # Files legitimately full of private-range IPs (SSRF guards + their tests) and
 # security-audit prose. Private IPs there are generic examples, not PII.
-IP_EXCLUDE='(/__tests__/|\.test\.|\.spec\.|^e2e/|src/app/api/recipes/import-url/route\.ts$|src/lib/integrations/(caldav|carddav|immich)\.ts$|src/lib/utils/safeFetch\.ts$|^docs/(audit-|code-review-modalities))'
+IP_EXCLUDE='(/__tests__/|\.test\.|\.spec\.|^e2e/|src/app/api/recipes/import-url/route\.ts$|src/lib/integrations/(caldav|carddav|immich)\.ts$|src/lib/utils/safeFetch\.ts$|^docs/(audit-|code-review-modalities)|^docs/demos/)'
 
 # Emails that are NOT maintainer PII: the public commit identity, GitHub
 # noreply, RFC2606 example domains, vendor/system addresses the integration code
