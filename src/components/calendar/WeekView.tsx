@@ -31,6 +31,8 @@ import {
   toDisplayDate,
 } from '@/lib/utils/timeFormat';
 import { eventsOverlappingRange } from '@/lib/utils/calendarRange';
+import { useDateLabels } from '@/lib/hooks/useDateLabels';
+import { useTranslations } from 'next-intl';
 
 export type CalendarDisplayMode = 'inline' | 'cards';
 
@@ -61,6 +63,8 @@ export function WeekView({
   onItemClick,
 }: WeekViewProps) {
   const { timeFormat, displayTimezone } = useTimeFormat();
+  const t = useTranslations('calendar');
+  const d = useDateLabels();
   const displayNow = toDisplayDate(new Date(), displayTimezone);
   const cards = displayMode === 'cards';
   const { weekStartsOn } = useWeekStartsOn();
@@ -169,7 +173,7 @@ export function WeekView({
           )}
         >
           <div className={cn('font-bold uppercase tracking-wide', compact ? 'text-xs' : 'text-sm')}>
-            {format(date, 'EEE')}
+            {d.weekdayShort(date)}
           </div>
           <div className={cn('font-bold', compact ? 'text-lg' : 'text-xl')}>
             {format(date, 'd')}
@@ -286,8 +290,8 @@ export function WeekView({
                     ? 'bg-blue-500 text-white'
                     : 'hover:bg-accent text-muted-foreground'
                 )}
-                title={hiddenSettings.enabled ? 'Show all hours' : 'Hide time block'}
-                aria-label={hiddenSettings.enabled ? 'Show all hours' : 'Hide time block'}
+                title={hiddenSettings.enabled ? t('showAllHours') : t('hideTimeBlock')}
+                aria-label={hiddenSettings.enabled ? t('showAllHours') : t('hideTimeBlock')}
               >
                 <Clock className="h-3 w-3" />
               </button>
@@ -346,8 +350,8 @@ export function WeekView({
                     ? 'bg-blue-500 text-white'
                     : 'hover:bg-accent text-muted-foreground'
                 )}
-                title={hiddenSettings.enabled ? 'Show all hours' : 'Hide time block'}
-                aria-label={hiddenSettings.enabled ? 'Show all hours' : 'Hide time block'}
+                title={hiddenSettings.enabled ? t('showAllHours') : t('hideTimeBlock')}
+                aria-label={hiddenSettings.enabled ? t('showAllHours') : t('hideTimeBlock')}
               >
                 <Clock className="h-4 w-4" />
               </button>
@@ -398,7 +402,7 @@ export function WeekView({
                         'text-xs font-medium uppercase tracking-wide truncate leading-none',
                         isSameDay(date, displayNow) && cards ? 'text-seasonal-accent font-semibold' : undefined,
                       )}>
-                        {isSameDay(date, displayNow) ? 'Today' : format(date, 'EEE')}
+                        {isSameDay(date, displayNow) ? t('today') : d.weekdayShort(date)}
                       </span>
                     </div>
                     {dayWeather && (

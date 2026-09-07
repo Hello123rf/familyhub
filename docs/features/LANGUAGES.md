@@ -26,7 +26,7 @@ translation is perfectly usable.
 | Navigation (sidebar, portrait nav, mobile nav) | ✅ done |
 | Common actions (Save, Cancel, Delete, …) | ✅ keys ready |
 | Birthdays widget | ✅ done |
-| Calendar — widget + page | ⬜ to do |
+| Calendar - views, toolbar, widget, add/edit event form | ✅ done |
 | Chores — widget + page | ⬜ to do |
 | Meals — widget + page | ⬜ to do |
 | Messages — widget + page | ⬜ to do |
@@ -35,7 +35,8 @@ translation is perfectly usable.
 | Tasks — widget + page | ⬜ to do |
 | Travel — widget + page | ⬜ to do |
 | Wishes — widget + page | ⬜ to do |
-| Clock / Weather / Points / Bus widgets | ⬜ to do |
+| Clock / Weather widgets | ✅ done |
+| Points / Bus widgets | ⬜ to do |
 | Settings pages | ⬜ to do |
 | Setup wizard | ⬜ to do |
 
@@ -45,7 +46,11 @@ used in both places.
 ## Dates, times and numbers
 
 Dates and numbers already follow the selected language automatically — a German
-dashboard shows `24. Dez.` rather than `Dec 24`.
+dashboard shows `24. Dez.` rather than `Dec 24`. That covers the **order** of
+the parts as well as their names: a German calendar header reads
+`4. September 2026`, not `September 4, 2026`. Day-first order isn't something a
+translation file can express, so date labels are built from the language rather
+than from a fixed pattern in the code.
 
 **12- vs 24-hour time is a separate setting**, under
 **Settings → General**. It is deliberately independent of language, so you can

@@ -1,6 +1,7 @@
 'use client';
 
 import { format } from 'date-fns';
+import { useDateLabels } from '@/lib/hooks/useDateLabels';
 import { NoteEditor } from './NoteEditor';
 import type { CalendarNote } from '@/lib/hooks/useCalendarNotes';
 
@@ -17,6 +18,8 @@ export function CalendarNotesColumn({
   onNoteChange,
   hideDateHeaders,
 }: CalendarNotesColumnProps) {
+  const d = useDateLabels();
+
   return (
     <div className="h-full overflow-auto">
       {days.map((day) => {
@@ -27,7 +30,7 @@ export function CalendarNotesColumn({
             {!hideDateHeaders && (
               <div className="px-3 pt-2 pb-1">
                 <span className="text-xs font-medium text-muted-foreground">
-                  {format(day, 'EEE, MMM d')}
+                  {d.weekdayMonthDay(day)}
                 </span>
               </div>
             )}

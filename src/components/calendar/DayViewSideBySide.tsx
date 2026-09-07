@@ -9,6 +9,7 @@ import {
 } from 'date-fns';
 import { Clock } from 'lucide-react';
 import { NoteEditor } from './NoteEditor';
+import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 import { useWidgetBgOverride } from '@/components/widgets/WidgetContainer';
 import { useHiddenHours } from '@/lib/hooks/useHiddenHours';
@@ -69,6 +70,7 @@ export function DayViewSideBySide({
   onItemClick,
 }: DayViewSideBySideProps) {
   const { timeFormat, displayTimezone } = useTimeFormat();
+  const t = useTranslations('calendar');
   const cards = displayMode === 'cards';
   const droppable = useDayDroppable({ date: currentDate, enabled: cards && enableDnd });
   const bgOverride = useWidgetBgOverride();
@@ -141,7 +143,7 @@ export function DayViewSideBySide({
 
   // For single-column mode or when no groups are selected, create a synthetic group
   const displayGroups = showAllInOne || filteredGroups.length === 0
-    ? [{ id: 'all', name: 'All Events', color: '#3B82F6' }]
+    ? [{ id: 'all', name: t('allEvents'), color: '#3B82F6' }]
     : filteredGroups;
 
   const getEventsForGroup = (gid: string) => {
@@ -185,7 +187,7 @@ export function DayViewSideBySide({
                     ? 'bg-blue-500 text-white'
                     : 'hover:bg-accent text-muted-foreground'
                 )}
-                title={hiddenSettings.enabled ? 'Show all hours' : 'Hide time block'}
+                title={hiddenSettings.enabled ? t('showAllHours') : t('hideTimeBlock')}
               >
                 <Clock className="h-4 w-4" />
               </button>
@@ -270,7 +272,7 @@ export function DayViewSideBySide({
                   className="text-sm font-medium text-center py-1 mb-1 rounded text-white"
                   style={{ backgroundColor: '#6366f1' }}
                 >
-                  Notes
+                  {t('notes')}
                 </div>
               </div>
             )}

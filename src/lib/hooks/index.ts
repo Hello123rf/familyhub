@@ -31,3 +31,5 @@ export { useHiddenPages } from './useHiddenPages';
 export { useCalendarNotes } from './useCalendarNotes';
 export type { CalendarNote } from './useCalendarNotes';
 export { useGiftIdeas } from './useGiftIdeas';
+export { useDateLabels } from './useDateLabels';
+export type { DateLabels } from './useDateLabels';

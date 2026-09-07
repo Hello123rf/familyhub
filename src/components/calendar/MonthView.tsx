@@ -19,6 +19,7 @@ import { useWidgetBgOverride } from '@/components/widgets/WidgetContainer';
 import { hexToRgba } from '@/lib/utils/color';
 import { useWeekStartsOn } from '@/lib/hooks/useWeekStartsOn';
 import { DAYS_SHORT_ARRAY } from '@/lib/constants/days';
+import { useDateLabels } from '@/lib/hooks/useDateLabels';
 import type { CalendarEvent } from '@/types/calendar';
 import { seasonalPalettes } from '@/lib/themes/seasonalThemes';
 import { CardHeightProbe, DayOverflowPopover, DroppableOverlayCell, InlineCalendarEvent, SpanningEventRows, useDayDroppable, type OverlayItemRef } from './cells';
@@ -65,6 +66,7 @@ export function MonthView({
   showMonthHeader = true,
 }: MonthViewProps) {
   const { displayTimezone } = useTimeFormat();
+  const d = useDateLabels();
   const displayNow = toDisplayDate(new Date(), displayTimezone);
   const cards = displayMode === 'cards';
   const { weekStartsOn } = useWeekStartsOn();
@@ -88,7 +90,9 @@ export function MonthView({
   }
 
   const numWeeks = Math.ceil(days.length / 7);
-  const dayNames = [...DAYS_SHORT_ARRAY.slice(weekStartsOn), ...DAYS_SHORT_ARRAY.slice(0, weekStartsOn)];
+  // Sunday-first indices rotated to the configured week start; the names
+  // themselves come from the interface language, not DAYS_SHORT_ARRAY.
+  const dayIndices = Array.from({ length: 7 }, (_, i) => (i + weekStartsOn) % DAYS_SHORT_ARRAY.length);
   // Scope the wide event list to this month grid's visible range once, so the
   // spanning + per-day filters iterate ~40 events instead of thousands.
   const scopedEvents = eventsOverlappingRange(events, calendarStart, calendarEnd);
@@ -110,16 +114,16 @@ export function MonthView({
           className="shrink-0 text-center py-1 font-semibold text-sm text-white rounded-t-md shadow-sm"
           style={{ backgroundColor: monthColor }}
         >
-          {format(currentDate, 'MMMM yyyy')}
+          {d.monthYear(currentDate)}
         </div>
       )}
       <div className="shrink-0 grid grid-cols-7 border-b border-border/70">
-        {dayNames.map((name) => (
+        {dayIndices.map((index) => (
           <div
-            key={name}
+            key={index}
             className="text-center text-xs font-medium text-muted-foreground py-1.5"
           >
-            {name}
+            {d.weekdayByIndex(index)}
           </div>
         ))}
       </div>

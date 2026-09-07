@@ -11,6 +11,7 @@ import {
 } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { DAYS_SHORT_ARRAY } from '@/lib/constants/days';
+import { useDateLabels } from '@/lib/hooks/useDateLabels';
 import { useWidgetBgOverride } from '@/components/widgets/WidgetContainer';
 import { useOrientation } from '@/lib/hooks/useOrientation';
 import type { CalendarEvent } from '@/types/calendar';
@@ -35,6 +36,7 @@ export function TwoWeekView({
   onEventClick,
 }: TwoWeekViewProps) {
   const { timeFormat, displayTimezone } = useTimeFormat();
+  const d = useDateLabels();
   const displayNow = toDisplayDate(new Date(), displayTimezone);
   const bgOverride = useWidgetBgOverride();
   const transparentMode = bgOverride?.hasCustomBg === true;
@@ -47,7 +49,7 @@ export function TwoWeekView({
     days.push(addDays(weekStart, i));
   }
 
-  const dayNames = DAYS_SHORT_ARRAY;
+  const dayIndices = DAYS_SHORT_ARRAY.map((_, index) => index);
   const week1 = days.slice(0, 7);
   const week2 = days.slice(7, 14);
   const week1Num = getWeek(week1[0]!);
@@ -95,7 +97,7 @@ export function TwoWeekView({
             today && 'text-primary'
           )}>
             <span className="font-bold">{format(date, 'd')}</span>
-            <span className="text-xs text-muted-foreground">{format(date, 'MMM')}</span>
+            <span className="text-xs text-muted-foreground">{d.monthShort(date)}</span>
           </div>
         </div>
 
@@ -151,12 +153,12 @@ export function TwoWeekView({
           className="flex-1 shrink-0 grid gap-1"
           style={{ gridTemplateRows: 'repeat(7, minmax(50px, 1fr))' }}
         >
-          {dayNames.map((dayName, dayIndex) => (
+          {dayIndices.map((dayIndex) => (
             <div key={dayIndex} className="flex gap-1 min-h-0 h-full">
               {/* Day label */}
               <div className="w-10 shrink-0 flex items-center justify-center">
                 <span className="text-xs font-bold text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded">
-                  {dayName}
+                  {d.weekdayByIndex(dayIndex)}
                 </span>
               </div>
               {/* Week 1 day */}
@@ -179,9 +181,9 @@ export function TwoWeekView({
     <div className="h-full flex flex-col overflow-auto">
       {/* Day headers */}
       <div className="grid grid-cols-7 gap-1 mb-1 shrink-0">
-        {dayNames.map((name) => (
-          <div key={name} className="text-center text-sm font-medium text-muted-foreground py-2">
-            {name}
+        {dayIndices.map((index) => (
+          <div key={index} className="text-center text-sm font-medium text-muted-foreground py-2">
+            {d.weekdayByIndex(index)}
           </div>
         ))}
       </div>

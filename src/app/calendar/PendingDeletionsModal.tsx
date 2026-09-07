@@ -1,7 +1,8 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { format, parseISO } from 'date-fns';
+import { parseISO } from 'date-fns';
+import { useTranslations } from 'next-intl';
 import { AlertTriangle, ArrowRight, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -15,6 +16,7 @@ import {
 import type { PendingDeletion } from '@/lib/hooks/usePendingDeletions';
 import { useTimeFormat } from '@/components/providers';
 import { formatDisplayTime, toDisplayDate } from '@/lib/utils/timeFormat';
+import { useDateLabels } from '@/lib/hooks/useDateLabels';
 
 /**
  * Deletes-only review (#171 Stage 3). Lists events the sync found removed from
@@ -31,6 +33,9 @@ export function PendingDeletionsModal({
   onClose: () => void;
 }) {
   const { timeFormat, displayTimezone } = useTimeFormat();
+  const t = useTranslations('calendar.pending');
+  const tActions = useTranslations('common.actions');
+  const d = useDateLabels();
   const [selected, setSelected] = useState<Set<string>>(() => new Set(pending.map((p) => p.id)));
   const [busy, setBusy] = useState(false);
 
@@ -59,19 +64,21 @@ export function PendingDeletionsModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-amber-500" />
-            Review removals
+            {t('title')}
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-3 py-1 flex-1 min-h-0 flex flex-col">
           <p className="text-sm text-muted-foreground">
-            These events were removed from their source calendar and held for review.{' '}
-            <span className="font-medium text-foreground">Delete</span> removes them from Prism too.{' '}
-            <span className="font-medium text-foreground">Keep</span> transfers each one to your{' '}
-            <span className="inline-flex items-center gap-1 font-medium text-foreground">
-              <Home className="h-3 w-3" />local calendar
-            </span>{' '}
-            — it stops syncing and stays put.
+            {t.rich('explain', {
+              b: (chunks) => <span className="font-medium text-foreground">{chunks}</span>,
+              local: (chunks) => (
+                <span className="inline-flex items-center gap-1 font-medium text-foreground">
+                  <Home className="h-3 w-3" />
+                  {chunks}
+                </span>
+              ),
+            })}
           </p>
 
           <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground px-1">
@@ -81,7 +88,7 @@ export function PendingDeletionsModal({
                 setSelected(allSelected ? new Set() : new Set(pending.map((p) => p.id)))
               }
             />
-            Select all ({selected.size}/{pending.length})
+            {t('selectAll', { selected: selected.size, total: pending.length })}
           </label>
 
           {/* Native scroll (not Radix ScrollArea) so the list drag-scrolls on
@@ -98,8 +105,8 @@ export function PendingDeletionsModal({
                     <span className="font-medium">{p.title}</span>
                     <span className="block text-xs text-muted-foreground">
                       {p.allDay
-                        ? format(toDisplayDate(parseISO(p.startTime), displayTimezone), 'EEE, MMM d')
-                        : `${format(toDisplayDate(parseISO(p.startTime), displayTimezone), 'EEE, MMM d')} · ${formatDisplayTime(parseISO(p.startTime), timeFormat, {}, displayTimezone)}`}
+                        ? d.weekdayMonthDay(toDisplayDate(parseISO(p.startTime), displayTimezone))
+                        : `${d.weekdayMonthDay(toDisplayDate(parseISO(p.startTime), displayTimezone))} · ${formatDisplayTime(parseISO(p.startTime), timeFormat, {}, displayTimezone)}`}
                     </span>
                     <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground flex-wrap">
                       <span className="inline-flex items-center gap-1 min-w-0">
@@ -111,7 +118,7 @@ export function PendingDeletionsModal({
                       </span>
                       <ArrowRight className="h-3 w-3 opacity-60 shrink-0" />
                       <span className="inline-flex items-center gap-1 shrink-0">
-                        <Home className="h-3 w-3" />Local (if kept)
+                        <Home className="h-3 w-3" />{t('localIfKept')}
                       </span>
                     </span>
                   </span>
@@ -123,14 +130,14 @@ export function PendingDeletionsModal({
 
         <DialogFooter className="gap-2">
           <Button variant="outline" onClick={onClose} disabled={busy}>
-            Cancel
+            {tActions('cancel')}
           </Button>
           <Button variant="outline" onClick={() => act('keep')} disabled={busy || selected.size === 0}>
             <Home className="h-4 w-4 mr-1.5" />
-            Keep {selected.size} in Local
+            {t('keep', { count: selected.size })}
           </Button>
           <Button variant="destructive" onClick={() => act('delete')} disabled={busy || selected.size === 0}>
-            Delete {selected.size}
+            {t('delete', { count: selected.size })}
           </Button>
         </DialogFooter>
       </DialogContent>

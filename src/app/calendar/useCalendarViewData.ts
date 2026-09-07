@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo, useCallback, useTransition } from 'react';
 import {
-  format,
   startOfWeek,
   endOfWeek,
   addDays,
@@ -12,7 +11,9 @@ import {
   subWeeks,
   subDays,
 } from 'date-fns';
+import { useTranslations } from 'next-intl';
 import { useCalendarEvents, useCalendarFilter } from '@/lib/hooks';
+import { useDateLabels } from '@/lib/hooks/useDateLabels';
 import { useWeekStartsOn } from '@/lib/hooks/useWeekStartsOn';
 import { deduplicateEvents } from '@/lib/utils/calendarDedup';
 import { getFullCalendarRange, MAX_CALENDAR_EVENTS } from '@/lib/utils/calendarRange';
@@ -26,6 +27,8 @@ export type MultiWeekCount = 1 | 2 | 3 | 4;
 export type { CalendarGroup } from '@/lib/hooks';
 
 export function useCalendarViewData() {
+  const t = useTranslations('calendar');
+  const d = useDateLabels();
   const { weekStartsOn } = useWeekStartsOn();
   const { displayTimezone } = useTimeFormat();
   // View/date changes trigger a heavy re-bucket + grid re-render. Running those
@@ -186,28 +189,30 @@ export function useCalendarViewData() {
     }));
   }, [viewType, weekCount]);
 
+  // The header reads in the interface language: Intl picks the field order as
+  // well as the names, so German gets "4. September 2026", not "September 4".
   const getDateRangeTitle = useCallback((): string => {
     switch (viewType) {
       case 'agenda':
-        return 'Upcoming Events';
+        return t('upcoming');
       case 'day':
-        return format(currentDate, 'EEEE, MMMM d, yyyy');
+        return d.fullDate(currentDate);
       case 'week':
-      case 'weekVertical': {
-        const ws = startOfWeek(currentDate, { weekStartsOn });
-        const we = endOfWeek(currentDate, { weekStartsOn });
-        return `${format(ws, 'MMM d')} - ${format(we, 'MMM d, yyyy')}`;
-      }
-      case 'multiWeek': {
-        const tws = startOfWeek(currentDate, { weekStartsOn });
-        const twe = endOfWeek(addWeeks(currentDate, weekCount - 1), { weekStartsOn });
-        return `${format(tws, 'MMM d')} - ${format(twe, 'MMM d, yyyy')}`;
-      }
+      case 'weekVertical':
+        return d.range(
+          startOfWeek(currentDate, { weekStartsOn }),
+          endOfWeek(currentDate, { weekStartsOn }),
+        );
+      case 'multiWeek':
+        return d.range(
+          startOfWeek(currentDate, { weekStartsOn }),
+          endOfWeek(addWeeks(currentDate, weekCount - 1), { weekStartsOn }),
+        );
       case 'month':
       case 'threeMonth':
-        return format(currentDate, 'MMMM yyyy');
+        return d.monthYear(currentDate);
     }
-  }, [viewType, weekCount, currentDate, weekStartsOn]);
+  }, [viewType, weekCount, currentDate, weekStartsOn, t, d]);
 
   return {
     currentDate, setCurrentDate,

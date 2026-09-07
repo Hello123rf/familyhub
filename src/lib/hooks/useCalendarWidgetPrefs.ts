@@ -32,16 +32,21 @@ const VALID_VIEWS: WidgetViewType[] = [
   'agenda', 'list', 'day', 'week', 'multiWeek', 'multiWeek2', 'multiWeek3', 'multiWeek4', 'month',
 ];
 
-export const VIEW_OPTIONS: { value: WidgetViewType; label: string }[] = [
-  { value: 'agenda', label: 'Agenda' },
-  { value: 'day', label: 'Day' },
-  { value: 'list', label: 'List' },
-  { value: 'week', label: 'Schedule' },
-  { value: 'multiWeek', label: '1W' },
-  { value: 'multiWeek2', label: '2W' },
-  { value: 'multiWeek3', label: '3W' },
-  { value: 'multiWeek4', label: '4W' },
-  { value: 'month', label: 'Month' },
+/**
+ * `labelKey` indexes the `calendar.views` catalogue rather than holding copy:
+ * the widget toolbar has to follow Settings → Appearance → Language, and this
+ * module is imported by non-React code that has no translator to call.
+ */
+export const VIEW_OPTIONS: { value: WidgetViewType; labelKey: string }[] = [
+  { value: 'agenda', labelKey: 'agenda' },
+  { value: 'day', labelKey: 'day' },
+  { value: 'list', labelKey: 'list' },
+  { value: 'week', labelKey: 'schedule' },
+  { value: 'multiWeek', labelKey: 'week1Short' },
+  { value: 'multiWeek2', labelKey: 'week2Short' },
+  { value: 'multiWeek3', labelKey: 'week3Short' },
+  { value: 'multiWeek4', labelKey: 'week4Short' },
+  { value: 'month', labelKey: 'month' },
 ];
 
 /** Which views are available at a given grid size (48-column grid) */

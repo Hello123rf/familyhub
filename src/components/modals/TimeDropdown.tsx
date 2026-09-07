@@ -1,16 +1,30 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
+import { useTimeFormat } from '@/components/providers';
+import type { TimeFormat } from '@/lib/utils/timeFormat';
 
-export function formatTime12(hhmm: string): string {
+/**
+ * Render an "HH:mm" slot for the picker, honouring Settings -> General, so a
+ * German dashboard on 24h reads "14:30" rather than "2:30 PM".
+ *
+ * Deliberately NOT calendar/cells' formatTimeOfDay: that one drops ":00" on
+ * the hour to keep event labels compact, which in a column of half-hour slots
+ * gives a ragged "9 AM / 9:30 AM / 10 AM". A picker wants every row the same
+ * shape.
+ */
+export function formatPickerTime(hhmm: string, timeFormat: TimeFormat = '12h'): string {
   const [hStr, mStr] = hhmm.split(':');
   const h = parseInt(hStr ?? '0', 10);
   const m = parseInt(mStr ?? '0', 10);
   if (isNaN(h) || isNaN(m)) return '';
+  const mm = String(m).padStart(2, '0');
+  if (timeFormat === '24h') return `${String(h).padStart(2, '0')}:${mm}`;
   const period = h >= 12 ? 'PM' : 'AM';
   const hour = h % 12 || 12;
-  return `${hour}:${String(m).padStart(2, '0')} ${period}`;
+  return `${hour}:${mm} ${period}`;
 }
 
 function parseTimeInput(raw: string): string | null {
@@ -56,6 +70,8 @@ interface TimeDropdownProps {
 }
 
 export function TimeDropdown({ value, onChange, minTime, disabled, className }: TimeDropdownProps) {
+  const t = useTranslations('calendar.eventForm');
+  const { timeFormat } = useTimeFormat();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState('');
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -106,7 +122,7 @@ export function TimeDropdown({ value, onChange, minTime, disabled, className }: 
         onClick={() => setOpen((v) => !v)}
         className="h-8 px-2.5 rounded-md text-sm font-medium hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
       >
-        {value ? formatTime12(value) : 'Time'}
+        {value ? formatPickerTime(value, timeFormat) : t('timePlaceholder')}
       </button>
 
       {open && (
@@ -118,7 +134,7 @@ export function TimeDropdown({ value, onChange, minTime, disabled, className }: 
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={handleKeyDown}
               onBlur={commitDraft}
-              placeholder="e.g. 2:30 PM"
+              placeholder={t('timeHint')}
               className="w-full text-xs px-2 py-1.5 rounded-md bg-muted/50 placeholder:text-muted-foreground/50 outline-none focus:ring-1 focus:ring-primary"
             />
           </div>
@@ -134,7 +150,7 @@ export function TimeDropdown({ value, onChange, minTime, disabled, className }: 
                     minTime && slot < minTime && slot !== value && 'text-muted-foreground/50'
                   )}
                 >
-                  {formatTime12(slot)}
+                  {formatPickerTime(slot, timeFormat)}
                 </button>
               </li>
             ))}

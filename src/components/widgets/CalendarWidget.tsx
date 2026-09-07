@@ -12,6 +12,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from '@dnd-kit/core';
+import { useTranslations } from 'next-intl';
 import { Calendar, Loader2, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -19,6 +20,7 @@ import { isLightColor } from '@/lib/utils/color';
 import { deduplicateEvents } from '@/lib/utils/calendarDedup';
 import { WidgetContainer, useWidgetBgOverride } from './WidgetContainer';
 import { useCalendarEvents, useCalendarFilter, useCalendarNotes } from '@/lib/hooks';
+import { useDateLabels } from '@/lib/hooks/useDateLabels';
 import { useDayBucketsForRange } from '@/lib/hooks/useDayBucketsForRange';
 import { useWeekMutations } from '@/lib/hooks/useWeekMutations';
 import { useAuth } from '@/components/providers';
@@ -58,6 +60,8 @@ export const CalendarWidget = React.memo(function CalendarWidget({
   gridH = 2,
 }: CalendarWidgetProps) {
   const { activeUser } = useAuth();
+  const t = useTranslations('calendar');
+  const formatDayHeader = useDayHeaderFormatter();
   const { weekStartsOn } = useWeekStartsOn();
   const bgOverride = useWidgetBgOverride();
   const transparentMode = bgOverride?.hasCustomBg === true;
@@ -192,7 +196,7 @@ export const CalendarWidget = React.memo(function CalendarWidget({
         await moveEvent(itemId, ev.startTime, ev.endTime, targetBucket.date);
       }
     } catch (err) {
-      setMoveError(err instanceof Error ? err.message : 'Failed to move item');
+      setMoveError(err instanceof Error ? err.message : t('errors.moveFailed'));
     }
   };
 
@@ -232,7 +236,7 @@ export const CalendarWidget = React.memo(function CalendarWidget({
             : transparentMode ? 'text-current/70 hover:text-current' : 'bg-muted text-muted-foreground hover:bg-accent'
         )}
       >
-        All
+        {t('toolbar.all')}
       </button>
       {calendarGroups.map((group) => (
         <button
@@ -259,7 +263,7 @@ export const CalendarWidget = React.memo(function CalendarWidget({
 
   return (
     <WidgetContainer
-      title="Calendar"
+      title={t('title')}
       titleHref={titleHref}
       icon={<Calendar className="h-4 w-4" />}
       size="large"
@@ -307,7 +311,9 @@ export const CalendarWidget = React.memo(function CalendarWidget({
 
       {viewUnavailable && (
         <div className="text-[10px] text-muted-foreground text-center py-1 bg-muted/50 rounded mb-1">
-          Resize widget for {VIEW_OPTIONS.find(v => v.value === viewType)?.label} view
+          {t('toolbar.resizeForView', {
+            view: t(`views.${VIEW_OPTIONS.find((v) => v.value === viewType)?.labelKey ?? 'agenda'}`),
+          })}
         </div>
       )}
 
@@ -433,9 +439,13 @@ export const CalendarWidget = React.memo(function CalendarWidget({
   );
 });
 
-function formatDayHeader(date: Date): string {
-  const dayName = format(date, 'EEEE, MMMM d, yyyy');
-  if (isToday(date)) return `Today - ${dayName}`;
-  if (isTomorrow(date)) return `Tomorrow - ${dayName}`;
-  return dayName;
+function useDayHeaderFormatter(): (date: Date) => string {
+  const t = useTranslations('calendar');
+  const d = useDateLabels();
+  return (date: Date) => {
+    const dayName = d.fullDate(date);
+    if (isToday(date)) return t('dayHeader', { label: t('today'), date: dayName });
+    if (isTomorrow(date)) return t('dayHeader', { label: t('tomorrow'), date: dayName });
+    return dayName;
+  };
 }

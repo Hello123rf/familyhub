@@ -2,6 +2,7 @@
 
 import { useRef, useCallback, useEffect } from 'react';
 import DOMPurify from 'dompurify';
+import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 
 export interface NoteEditorProps {
@@ -22,8 +23,9 @@ export function NoteEditor({
   content,
   onNoteChange,
   className,
-  placeholder = 'Add notes...',
+  placeholder,
 }: NoteEditorProps) {
+  const t = useTranslations('calendar');
   const editable = !!onNoteChange;
   const editorRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -108,7 +110,7 @@ export function NoteEditor({
         editable && 'empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground/40 empty:before:pointer-events-none',
         className,
       )}
-      data-placeholder={editable ? placeholder : undefined}
+      data-placeholder={editable ? (placeholder ?? t('notesPlaceholder')) : undefined}
     />
   );
 }
