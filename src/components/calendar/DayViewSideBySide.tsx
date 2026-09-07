@@ -143,7 +143,7 @@ export function DayViewSideBySide({
 
   // For single-column mode or when no groups are selected, create a synthetic group
   const displayGroups = showAllInOne || filteredGroups.length === 0
-    ? [{ id: 'all', name: 'All Events', color: '#3B82F6' }]
+    ? [{ id: 'all', name: t('allEvents'), color: '#3B82F6' }]
     : filteredGroups;
 
   const getEventsForGroup = (gid: string) => {

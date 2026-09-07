@@ -26,6 +26,7 @@ import {
   toDisplayDate,
 } from '@/lib/utils/timeFormat';
 import { eventsOverlappingRange } from '@/lib/utils/calendarRange';
+import { useTranslations } from 'next-intl';
 import { useDateLabels } from '@/lib/hooks/useDateLabels';
 
 export interface WeekVerticalViewProps {
@@ -73,6 +74,7 @@ export function WeekVerticalView({
   const cellBg = bgOverride?.cellBackgroundColor;
   const cellBgOpacity = bgOverride?.cellBackgroundOpacity ?? 1;
   const cellBgStyle = cellBg ? { backgroundColor: hexToRgba(cellBg, cellBgOpacity) } : undefined;
+  const t = useTranslations('calendar');
   const weekStart = startOfWeek(currentDate, { weekStartsOn });
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   // Scope the wide event list to this week once; passed into each day row.
@@ -86,7 +88,7 @@ export function WeekVerticalView({
     ? calendarGroups.filter((g) => selectedCalendarIds.has(g.id))
     : calendarGroups;
   const displayGroups = showAllInOne || filteredGroups.length === 0
-    ? [{ id: 'all', name: 'All Events', color: '#3B82F6' }]
+    ? [{ id: 'all', name: t('allEvents'), color: '#3B82F6' }]
     : filteredGroups;
 
   const getEventsForGroup = (dayEvents: CalendarEvent[], gid: string) => {
