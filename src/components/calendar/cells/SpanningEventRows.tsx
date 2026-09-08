@@ -12,6 +12,15 @@ import {
   isCalendarEventPast,
 } from '@/lib/utils/timeFormat';
 
+/**
+ * Horizontal padding on a day cell's event list, in px (`px-1`).
+ *
+ * Bars are inset by the same amount so their caps line up with the single-day
+ * chips beneath them, and a continuing bar adds it back twice to cross into the
+ * next cell's content box.
+ */
+const CELL_PADDING_X = 4;
+
 export type SpanningEventRowsProps = {
   date: Date;
   rowDates: Date[];
@@ -100,7 +109,10 @@ export function SpanningEventRows({
   return (
     <div
       data-spanning-events
-      className={cn('relative z-20 flex shrink-0 flex-col', compact ? 'gap-px' : 'gap-0.5')}
+      // px-1 matches the day's own event list, so a bar's cap lines up with the
+      // left and right edge of the chips under it. A bar that continues is
+      // widened past this padding below, so the slices still meet.
+      className={cn('relative z-20 flex shrink-0 flex-col px-1', compact ? 'gap-px' : 'gap-0.5')}
     >
       {byLane.slice(0, lastActiveLane + 1).map((laneEvent, lane) => {
         const rowHeight = compact ? 'h-3.5' : 'h-5';
@@ -154,7 +166,9 @@ export function SpanningEventRows({
             style={{
               backgroundColor: event.color,
               color: past ? contrastText(event.color) : '#fff',
-              width: continuesWithinRow ? `calc(100% + ${gap})` : '100%',
+              // Reaching the next day's slice now means covering this cell's
+              // right padding, the grid gap, and the next cell's left padding.
+              width: continuesWithinRow ? `calc(100% + ${gap} + ${CELL_PADDING_X * 2}px)` : '100%',
               clipPath:
                 continuesBeforeRow && continuesAfterRow
                   ? 'polygon(0 50%, 6px 0, calc(100% - 6px) 0, 100% 50%, calc(100% - 6px) 100%, 6px 100%)'
