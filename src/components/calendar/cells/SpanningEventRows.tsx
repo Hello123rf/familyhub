@@ -28,9 +28,15 @@ import {
  * same height, and square-edged, since a slice that continues is not capped on
  * that side. Undershooting leaves a visible gap; overshooting leaves nothing.
  *
- * 1rem clears the largest measured seam with room for a caller to add chrome.
+ * Sized with real headroom, not to the measured seam. 1rem was set from a
+ * 12.5px measurement and then fell 2px short the moment the band's padding
+ * changed, because the seam grows with the caller's padding and borders. The
+ * only cost of reaching further is more overlap onto the same event's own
+ * slice, which shows nothing; the cost of reaching too little is a hairline
+ * that lets whatever is underneath through. Measured seams so far: 8px in the
+ * month grid, 16px in the two-week view.
  */
-const SEAM_REACH = '1rem';
+const SEAM_REACH = '1.5rem';
 
 export type SpanningEventRowsProps = {
   date: Date;
@@ -47,6 +53,19 @@ export type SpanningEventRowsProps = {
    * full card, which is what still says "this one runs across days".
    */
   cards?: boolean;
+  /**
+   * The horizontal padding the day's own event list uses, as a Tailwind class.
+   *
+   * The band has to sit in the same content box as the chips beneath it, and
+   * each view pads its list differently: `px-1` in the month grid, `px-1.5` in
+   * the two-week view. Hardcoding one of them here made all-day cards 1.75px
+   * wider on each side than the timed cards under them, in every view but the
+   * one the constant came from.
+   *
+   * Stated by the caller, next to the list it has to match, so the two cannot
+   * drift apart unnoticed.
+   */
+  padX?: string;
   /**
    * How many of the blank lanes above this day's first bar the caller has
    * already filled with the day's own events.
@@ -119,6 +138,7 @@ export function SpanningEventRows({
   onEventClick,
   compact = false,
   cards = false,
+  padX = 'px-1',
   omitLeadingBlanks = 0,
 }: SpanningEventRowsProps) {
   const { timeFormat, displayTimezone } = useTimeFormat();
@@ -190,11 +210,12 @@ export function SpanningEventRows({
   return (
     <div
       data-spanning-events
-      // px-1 matches the day's own event list, so a bar's cap lines up with the
+      // padX matches the day's own event list, so a bar's cap lines up with the
       // left and right edge of the chips under it. A bar that continues is
       // widened past this padding below, so the slices still meet.
       className={cn(
-        'relative z-20 flex shrink-0 flex-col px-1',
+        'relative z-20 flex shrink-0 flex-col',
+        padX,
         // Same row gap as the day's own event list, and the same gap again
         // below the block, so a bar and the chip under it are spaced like two
         // chips rather than butting their borders together.
@@ -274,7 +295,15 @@ export function SpanningEventRows({
               // these off along with every other chip.
               roundLeft && 'rounded-l-md',
               roundRight && 'rounded-r-md',
-              cards && 'bg-card/85 backdrop-blur-sm border shadow-sm text-foreground',
+              // Opaque, unlike the single-day cards beside it, which are 85%.
+              //
+              // A spanning pill is the one card that crosses a cell boundary,
+              // so whatever sits under the seam shows through it. The Today
+              // column's accent ring did exactly that: measured at the seam,
+              // the pill was the topmost element and the ring was still
+              // visible through it, drawing a coloured line across a join that
+              // is meant to be invisible.
+              cards && 'bg-card border shadow-sm text-foreground',
               // Mid-pill edges carry no border, so a run of days reads as one
               // outlined object rather than a row of cards butted together.
               cards && reachesBack && 'border-l-0',
@@ -298,8 +327,27 @@ export function SpanningEventRows({
               // was supposed to be hiding.
               ...(cards
                 ? {
-                    borderColor: event.color,
-                    ...(reachesBack ? { borderLeftWidth: 0 } : { borderLeftWidth: 3 }),
+                    // A washed version of the event colour round the perimeter,
+                    // and the solid band on the leading edge that every other
+                    // card in this view already uses.
+                    //
+                    // The full-strength outline did the border's job with the
+                    // colour's saturation, so an all-day event shouted where a
+                    // timed card murmured, and a cell full of them read as a
+                    // stack of frames rather than as text.
+                    //
+                    // BLENDED toward the card, not made translucent, for two
+                    // reasons. A see-through border would let whatever sits
+                    // under the seam show through, which is the bug that drew a
+                    // coloured line across every join. And blending toward
+                    // `--card` follows the theme: it lightens on a pale theme
+                    // and darkens in dark mode, with no second value to keep in
+                    // step. Where color-mix is unavailable the declaration is
+                    // dropped and the neutral `border` colour applies.
+                    borderColor: `color-mix(in srgb, ${event.color} 35%, hsl(var(--card)))`,
+                    ...(reachesBack
+                      ? { borderLeftWidth: 0 }
+                      : { borderLeftWidth: 3, borderLeftColor: event.color }),
                     ...(continuesWithinRow ? { borderRightWidth: 0 } : {}),
                   }
                 : {}),

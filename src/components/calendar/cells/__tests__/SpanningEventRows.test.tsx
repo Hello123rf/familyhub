@@ -146,13 +146,13 @@ describe('SpanningEventRows', () => {
     // One generous reach, not a per-view sum: the seam differs between views
     // (8px in the month grid, 12.5px in the two-week view) and overshooting is
     // invisible, because a slice only reaches back over its own event's slice.
-    expect(buttons[1]!.style.marginLeft).toBe('calc(-1rem)');
-    expect(buttons[2]!.style.marginLeft).toBe('calc(-1rem)');
+    expect(buttons[1]!.style.marginLeft).toBe('calc(-1.5rem)');
+    expect(buttons[2]!.style.marginLeft).toBe('calc(-1.5rem)');
     // 1px grid gap plus a cell's padding on each side, kept in rem so it stays
     // correct at this app's 14px root rather than assuming 16px.
     expect(buttons[0]!.style.width).toBe('100%');
-    expect(buttons[1]!.style.width).toBe('calc(100% + 1rem)');
-    expect(buttons[2]!.style.width).toBe('calc(100% + 1rem)');
+    expect(buttons[1]!.style.width).toBe('calc(100% + 1.5rem)');
+    expect(buttons[2]!.style.width).toBe('calc(100% + 1.5rem)');
   });
 
   it('sizes a bar from the same variables a day event uses', () => {
@@ -253,7 +253,10 @@ describe('SpanningEventRows', () => {
     );
 
     const bar = container.querySelector('button')!;
-    expect(bar.className).toContain('bg-card/85');
+    // Opaque, not the 85% the single-day cards use: a spanning pill crosses a
+    // cell boundary, so anything under the seam would show through it.
+    expect(bar.className).toContain('bg-card');
+    expect(bar.className).not.toContain('bg-card/85');
     expect(bar.className).toContain('shadow-sm');
     // The event colour moves to the leading edge instead of filling the bar.
     expect(bar.style.backgroundColor).toBe('');
@@ -289,7 +292,7 @@ describe('SpanningEventRows', () => {
     // Continuation days join back over the seam and drop the left border, so
     // the run is one object rather than a line of separate cards.
     for (const index of [2, 3]) {
-      expect(onDay(index).style.marginLeft).toBe('calc(-1rem)');
+      expect(onDay(index).style.marginLeft).toBe('calc(-1.5rem)');
       expect(onDay(index).className).toContain('border-l-0');
     }
     // Outlined in the event's own colour rather than the generic border.

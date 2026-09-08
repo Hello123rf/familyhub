@@ -351,6 +351,8 @@ function DayCell({
         onEventClick={onEventClick}
         compact={compact}
         cards={cards}
+        // Matches this view's event list below (line ~364).
+        padX={compact ? 'px-1' : 'px-1.5'}
       />
 
       {/* Cards / events. In cards mode, meals render at the top of the day's
