@@ -28,6 +28,15 @@ export type SpanningEventRowsProps = {
   onEventClick: (event: CalendarEvent) => void;
   compact?: boolean;
   /**
+   * Whether the day cells are drawing events as cards.
+   *
+   * A multi-day event is not a different species from a single-day one, so in
+   * cards mode it takes the same surface: card background, hairline border,
+   * shadow, and the event's colour on the leading edge. It stays shorter than a
+   * full card, which is what still says "this one runs across days".
+   */
+  cards?: boolean;
+  /**
    * The column gap this row's cells are laid out with, as a CSS length.
    *
    * A continuing slice widens by exactly this much so it meets the next day's
@@ -52,6 +61,7 @@ export function SpanningEventRows({
   events,
   onEventClick,
   compact = false,
+  cards = false,
   gap,
 }: SpanningEventRowsProps) {
   const { timeFormat, displayTimezone } = useTimeFormat();
@@ -124,8 +134,11 @@ export function SpanningEventRows({
         const continuesFromPrevious = occurs(event, addDays(date, -1));
         const continuesToNext = occurs(event, addDays(date, 1));
         const continuesWithinRow = continuesToNext && column < rowDates.length - 1;
-        const continuesBeforeRow = continuesFromPrevious && column === 0;
-        const continuesAfterRow = continuesToNext && column === rowDates.length - 1;
+        // Visible edges: the left one is hidden only when yesterday's slice
+        // bridges across it, the right one only when this slice bridges into
+        // tomorrow's.
+        const roundLeft = !(continuesFromPrevious && column > 0);
+        const roundRight = !continuesWithinRow;
         const past = isCalendarEventPast(
           event.startTime,
           event.endTime,
@@ -157,26 +170,35 @@ export function SpanningEventRows({
               'relative z-20 block w-full truncate text-left font-medium leading-tight hover:brightness-95',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-seasonal-accent',
               compact ? 'h-3.5 px-0.5 text-[8px]' : 'h-5 px-1 text-xs',
-              !continuesFromPrevious && 'rounded-l-md',
-              !continuesToNext && 'rounded-r-md',
-              continuesBeforeRow && (compact ? 'pl-1.5' : 'pl-2'),
-              continuesAfterRow && (compact ? 'pr-1.5' : 'pr-2'),
+              // One end treatment everywhere. An edge is rounded whenever it
+              // is actually visible: the only edges that are not are the ones
+              // a neighbouring slice bridges over inside the same week row.
+              // A bar that carries into the next row therefore ends in a cap
+              // like everything else, rather than a chevron.
+              //
+              // Radius comes from --radius, so a square-cornered theme squares
+              // these off along with every other chip.
+              roundLeft && 'rounded-l-md',
+              roundRight && 'rounded-r-md',
+              cards && 'bg-card/85 backdrop-blur-sm border-y border-border/40 shadow-sm text-foreground',
+              cards && roundLeft && 'border-l',
+              cards && roundRight && 'border-r border-border/40',
               past && 'opacity-55 saturate-[0.65]'
             )}
             style={{
-              backgroundColor: event.color,
-              color: past ? contrastText(event.color) : '#fff',
+              // In cards mode the colour moves to the leading edge, the way a
+              // single-day card carries it, so the two read as one family. The
+              // border is dropped on any edge a neighbouring slice bridges
+              // over, so a run of days stays one object rather than a row of
+              // separate cards.
+              backgroundColor: cards ? undefined : event.color,
+              color: cards ? undefined : past ? contrastText(event.color) : '#fff',
+              ...(cards && roundLeft
+                ? { borderLeftColor: event.color, borderLeftWidth: 3, borderLeftStyle: 'solid' as const }
+                : {}),
               // Reaching the next day's slice now means covering this cell's
               // right padding, the grid gap, and the next cell's left padding.
               width: continuesWithinRow ? `calc(100% + ${gap} + ${CELL_PADDING_X * 2}px)` : '100%',
-              clipPath:
-                continuesBeforeRow && continuesAfterRow
-                  ? 'polygon(0 50%, 6px 0, calc(100% - 6px) 0, 100% 50%, calc(100% - 6px) 100%, 6px 100%)'
-                  : continuesBeforeRow
-                    ? 'polygon(0 50%, 6px 0, 100% 0, 100% 100%, 6px 100%)'
-                    : continuesAfterRow
-                      ? 'polygon(0 0, calc(100% - 6px) 0, 100% 50%, calc(100% - 6px) 100%, 0 100%)'
-                      : undefined,
             }}
           >
             {(!continuesFromPrevious || column === 0) && label}

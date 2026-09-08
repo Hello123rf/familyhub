@@ -153,7 +153,47 @@ describe('SpanningEventRows', () => {
     expect(buttons[2]!.style.width).toBe('100%');
   });
 
-  it('shows continuation edges and repeats the label after a week wrap', () => {
+  it('wears the card surface in cards mode, with the colour on the leading edge', () => {
+    const rowDates = [new Date(2026, 7, 10), new Date(2026, 7, 11)];
+
+    const { container } = render(
+      <SpanningEventRows
+        date={new Date(2026, 7, 10)}
+        rowDates={rowDates}
+        events={[event]}
+        onEventClick={() => {}}
+        cards
+        gap="1px"
+      />,
+    );
+
+    const bar = container.querySelector('button')!;
+    expect(bar.className).toContain('bg-card/85');
+    expect(bar.className).toContain('shadow-sm');
+    // The event colour moves to the leading edge instead of filling the bar.
+    expect(bar.style.backgroundColor).toBe('');
+    expect(bar.style.borderLeftWidth).toBe('3px');
+  });
+
+  it('keeps filling with the event colour when cards mode is off', () => {
+    const rowDates = [new Date(2026, 7, 10), new Date(2026, 7, 11)];
+
+    const { container } = render(
+      <SpanningEventRows
+        date={new Date(2026, 7, 10)}
+        rowDates={rowDates}
+        events={[event]}
+        onEventClick={() => {}}
+        gap="1px"
+      />,
+    );
+
+    const bar = container.querySelector('button')!;
+    expect(bar.style.backgroundColor).not.toBe('');
+    expect(bar.className).not.toContain('bg-card/85');
+  });
+
+  it('caps a week-wrapping event at the row edges and joins it mid-row', () => {
     const wrappingEvent: CalendarEvent = {
       ...event,
       startTime: new Date('2026-08-09T00:00:00.000Z'),
@@ -179,10 +219,16 @@ describe('SpanningEventRows', () => {
     const buttons = container.querySelectorAll('button');
     expect(buttons).toHaveLength(7);
     expect(buttons[0]!.textContent).toBe('Family trip');
-    expect(buttons[0]!.className).not.toContain('rounded-l-md');
-    expect(buttons[0]!.style.clipPath).toContain('0 50%');
-    expect(buttons[6]!.className).not.toContain('rounded-r-md');
-    expect(buttons[6]!.style.clipPath).toContain('100% 50%');
+    // A week-wrapping event ends in a cap like everything else. Chevrons are
+    // gone: one end treatment across the whole grid, and the radius follows
+    // --radius so a square theme squares these off too.
+    expect(buttons[0]!.className).toContain('rounded-l-md');
+    expect(buttons[6]!.className).toContain('rounded-r-md');
+    expect(buttons[0]!.style.clipPath).toBe('');
+    expect(buttons[6]!.style.clipPath).toBe('');
+    // Mid-row edges stay open, so adjacent slices still read as one bar.
+    expect(buttons[3]!.className).not.toContain('rounded-l-md');
+    expect(buttons[3]!.className).not.toContain('rounded-r-md');
   });
 
   it('uses white text for a future spanning event', () => {

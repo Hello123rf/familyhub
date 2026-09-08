@@ -347,6 +347,7 @@ function DayCell({
         events={spanningEvents}
         onEventClick={onEventClick}
         compact={compact}
+        cards={cards}
         gap="0.25rem"
       />
 
