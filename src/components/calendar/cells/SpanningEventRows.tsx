@@ -37,6 +37,16 @@ export type SpanningEventRowsProps = {
    */
   cards?: boolean;
   /**
+   * How many of the blank lanes above this day's first bar the caller has
+   * already filled with the day's own events.
+   *
+   * A blank lane holds a bar's position steady across the days it spans. That
+   * job is done just as well by a single-day event of the same height sitting
+   * there, and a cell with space to spare should be using it: nothing about a
+   * multi-day event entitles it to the top of the cell.
+   */
+  omitLeadingBlanks?: number;
+  /**
    * The column gap this row's cells are laid out with, as a CSS length.
    *
    * A continuing slice widens by exactly this much so it meets the next day's
@@ -55,6 +65,56 @@ export type SpanningEventRowsProps = {
  * therefore meet without overlapping, which keeps translucent/muted bars from
  * producing darker seams at day boundaries.
  */
+
+/**
+ * How this row's multi-day events are packed into lanes, for one day.
+ *
+ * Exported because a day cell needs the same answer the bars do: how many blank
+ * lanes sit above its first bar, so it can put the day's own events there
+ * instead of leaving the space empty. Both callers derive it from the same
+ * inputs, so they cannot disagree.
+ */
+export function spanningLaneInfo(
+  events: CalendarEvent[],
+  rowDates: Date[],
+  date: Date,
+  displayTimezone: string,
+): { firstActiveLane: number; lastActiveLane: number } {
+  const occurs = (event: CalendarEvent, target: Date) =>
+    eventOccursOnDisplayDay(event.startTime, event.endTime, event.allDay, target, displayTimezone);
+
+  const ordered = [...events].sort(
+    (a, b) => a.startTime.getTime() - b.startTime.getTime() || a.id.localeCompare(b.id),
+  );
+  const occupancy: boolean[][] = [];
+  const laneOf = new Map<string, number>();
+  for (const event of ordered) {
+    const covers = rowDates.map((rowDate) => occurs(event, rowDate));
+    let lane = 0;
+    for (;; lane += 1) {
+      if (!occupancy[lane]) occupancy[lane] = rowDates.map(() => false);
+      if (!covers.some((covered, i) => covered && occupancy[lane]![i])) break;
+    }
+    covers.forEach((covered, i) => {
+      if (covered) occupancy[lane]![i] = true;
+    });
+    laneOf.set(event.id, lane);
+  }
+
+  let firstActiveLane = -1;
+  let lastActiveLane = -1;
+  for (const event of ordered) {
+    if (!occurs(event, date)) continue;
+    const lane = laneOf.get(event.id)!;
+    if (firstActiveLane < 0 || lane < firstActiveLane) firstActiveLane = lane;
+    if (lane > lastActiveLane) lastActiveLane = lane;
+  }
+  return { firstActiveLane, lastActiveLane };
+}
+
+/** A lane's height, so a hoisted single-day chip can occupy one exactly. */
+export const SPANNING_LANE_HEIGHT = { normal: 'h-5', compact: 'h-3.5' } as const;
+
 export function SpanningEventRows({
   date,
   rowDates,
@@ -62,6 +122,7 @@ export function SpanningEventRows({
   onEventClick,
   compact = false,
   cards = false,
+  omitLeadingBlanks = 0,
   gap,
 }: SpanningEventRowsProps) {
   const { timeFormat, displayTimezone } = useTimeFormat();
@@ -116,6 +177,10 @@ export function SpanningEventRows({
   });
   if (lastActiveLane < 0) return null;
 
+  // Never skip past a lane that holds a bar; only blanks the caller has filled.
+  const firstActiveLane = byLane.findIndex((laneEvent) => laneEvent !== null);
+  const startLane = Math.min(omitLeadingBlanks, Math.max(firstActiveLane, 0));
+
   return (
     <div
       data-spanning-events
@@ -124,7 +189,8 @@ export function SpanningEventRows({
       // widened past this padding below, so the slices still meet.
       className={cn('relative z-20 flex shrink-0 flex-col px-1', compact ? 'gap-px' : 'gap-0.5')}
     >
-      {byLane.slice(0, lastActiveLane + 1).map((laneEvent, lane) => {
+      {byLane.slice(startLane, lastActiveLane + 1).map((laneEvent, laneOffset) => {
+        const lane = startLane + laneOffset;
         const rowHeight = compact ? 'h-3.5' : 'h-5';
         // An empty lane below an occupied one: holds the lane open so the bar
         // under it keeps the same height on every day it spans.

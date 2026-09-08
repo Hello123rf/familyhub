@@ -22,7 +22,7 @@ import { DAYS_SHORT_ARRAY } from '@/lib/constants/days';
 import { useDateLabels } from '@/lib/hooks/useDateLabels';
 import type { CalendarEvent } from '@/types/calendar';
 import { seasonalPalettes } from '@/lib/themes/seasonalThemes';
-import { CardHeightProbe, DayOverflowPopover, DroppableOverlayCell, InlineCalendarEvent, SpanningEventRows, useDayDroppable, type OverlayItemRef } from './cells';
+import { CardHeightProbe, DayOverflowPopover, DroppableOverlayCell, InlineCalendarEvent, SpanningEventRows, spanningLaneInfo, useDayDroppable, type OverlayItemRef } from './cells';
 import { useCardCapacity } from '@/lib/hooks/useCardCapacity';
 import type { DayBucket } from '@/lib/hooks/useWeekViewData';
 import { useTimeFormat } from '@/components/providers';
@@ -232,6 +232,19 @@ function MonthDayCell({
   const today = isSameDay(date, toDisplayDate(new Date(), displayTimezone));
   const droppable = useDayDroppable({ date, enabled: cards && enableDnd });
 
+  // Blank lanes above this day's first bar are space the cell is not using.
+  // Fill them with the day's own events rather than leaving them empty: a
+  // chip is a lane tall, so the bar below keeps the exact position that makes
+  // it line up with its other days.
+  //
+  // Inline mode only. A card is taller than a lane, so hoisting one would push
+  // the bar down and cost the alignment this is built on.
+  const { firstActiveLane } = spanningLaneInfo(spanningEvents, rowDates, date, displayTimezone);
+  const hoistable = cards ? 0 : Math.max(firstActiveLane, 0);
+  const hoistCount = Math.min(hoistable, dayEvents.length);
+  const hoistedEvents = dayEvents.slice(0, hoistCount);
+  const remainingEvents = dayEvents.slice(hoistCount);
+
   return (
     <div
       ref={cards && enableDnd ? droppable.setNodeRef : undefined}
@@ -257,12 +270,23 @@ function MonthDayCell({
         </span>
       </div>
 
+      {hoistedEvents.length > 0 && (
+        <ul className="shrink-0 list-none m-0 px-1 pt-0 pb-0 flex flex-col gap-0.5">
+          {hoistedEvents.map((event) => (
+            <li key={event.id} className="h-5 overflow-hidden">
+              <InlineCalendarEvent event={event} onClick={onEventClick} />
+            </li>
+          ))}
+        </ul>
+      )}
+
       <SpanningEventRows
         date={date}
         rowDates={rowDates}
         events={spanningEvents}
         onEventClick={onEventClick}
         cards={cards}
+        omitLeadingBlanks={hoistCount}
         gap="1px"
       />
 
@@ -280,7 +304,7 @@ function MonthDayCell({
         // Row gap follows the theme's events mode; the fallback is the
         // 0.125rem that space-y-0.5 used to hard-code.
         <ul className="flex-1 overflow-y-auto list-none m-0 px-1 pb-1 pt-0 flex flex-col gap-[var(--event-gap,0.125rem)]">
-          {dayEvents.map((event) => (
+          {remainingEvents.map((event) => (
             <li key={event.id}>
               <InlineCalendarEvent event={event} onClick={onEventClick} />
             </li>
