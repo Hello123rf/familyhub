@@ -29,6 +29,7 @@
 import { db } from '@/lib/db/client';
 import { birthdays } from '@/lib/db/schema';
 import { and, eq, sql } from 'drizzle-orm';
+import { normalizePersonName } from '@/lib/utils/normalizePersonName';
 
 interface UpsertOpts {
   name: string;
@@ -37,10 +38,8 @@ interface UpsertOpts {
   source: string;          // e.g. 'birthdays', 'friends_family', 'caldav_contacts'
 }
 
-/** Strip punctuation, collapse whitespace, lowercase. */
-function normalize(s: string): string {
-  return s.replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
-}
+/** The shared comparison form; see normalizePersonName. */
+const normalize = normalizePersonName;
 
 /** Token-prefix: "alex" is prefix of "alex doe", "jordan doe" is NOT prefix of "jordan smith". */
 function isTokenPrefix(short: string, long: string): boolean {
