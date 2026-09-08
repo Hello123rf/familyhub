@@ -112,9 +112,6 @@ export function spanningLaneInfo(
   return { firstActiveLane, lastActiveLane };
 }
 
-/** A lane's height, so a hoisted single-day chip can occupy one exactly. */
-export const SPANNING_LANE_HEIGHT = { normal: 'h-5', compact: 'h-3.5' } as const;
-
 export function SpanningEventRows({
   date,
   rowDates,
@@ -181,20 +178,43 @@ export function SpanningEventRows({
   const firstActiveLane = byLane.findIndex((laneEvent) => laneEvent !== null);
   const startLane = Math.min(omitLeadingBlanks, Math.max(firstActiveLane, 0));
 
+  // A multi-day event is a single-day all-day event that happens to run on.
+  // These are the metrics its neighbours use, read from the same custom
+  // properties, so a bar and a chip are the same height with their text
+  // starting at the same offset under any theme.
+  const barMetrics = compact
+    ? 'px-0.5 py-px text-[8px]'
+    : cards
+      ? 'px-1 py-0.5 text-[10px]'
+      : 'px-[var(--event-padding-x,0.25rem)] py-[var(--event-padding-y,0.125rem)] text-[length:var(--event-font-size,0.75rem)] font-[var(--event-font-weight)]';
+
   return (
     <div
       data-spanning-events
       // px-1 matches the day's own event list, so a bar's cap lines up with the
       // left and right edge of the chips under it. A bar that continues is
       // widened past this padding below, so the slices still meet.
-      className={cn('relative z-20 flex shrink-0 flex-col px-1', compact ? 'gap-px' : 'gap-0.5')}
+      className={cn(
+        'relative z-20 flex shrink-0 flex-col px-1',
+        // Same row gap as the day's own event list, and the same gap again
+        // below the block, so a bar and the chip under it are spaced like two
+        // chips rather than butting their borders together.
+        compact ? 'gap-px mb-px' : cards ? 'gap-0.5 mb-0.5' : 'gap-[var(--event-gap,0.125rem)] mb-[var(--event-gap,0.125rem)]',
+      )}
     >
       {byLane.slice(startLane, lastActiveLane + 1).map((laneEvent, laneOffset) => {
         const lane = startLane + laneOffset;
-        const rowHeight = compact ? 'h-3.5' : 'h-5';
         // An empty lane below an occupied one: holds the lane open so the bar
-        // under it keeps the same height on every day it spans.
-        if (!laneEvent) return <div key={`lane-${lane}`} aria-hidden className={rowHeight} />;
+        // under it keeps the same height on every day it spans. It is an
+        // invisible copy of a bar rather than a fixed height, so it matches
+        // whatever height the theme's font and padding actually produce.
+        if (!laneEvent) {
+          return (
+            <div key={`lane-${lane}`} aria-hidden className={cn(barMetrics, 'invisible')}>
+              &nbsp;
+            </div>
+          );
+        }
 
         const event = laneEvent;
         const continuesFromPrevious = occurs(event, addDays(date, -1));
@@ -233,9 +253,11 @@ export function SpanningEventRows({
               onEventClick(event);
             }}
             className={cn(
-              'relative z-20 block w-full truncate text-left font-medium leading-tight hover:brightness-95',
+              'relative z-20 block w-full truncate text-left font-medium leading-tight',
+              // Hover matches whatever the day's own events do in this mode.
+              cards ? 'hover:bg-card transition-colors' : 'hover:brightness-95',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-seasonal-accent',
-              compact ? 'h-3.5 px-0.5 text-[8px]' : 'h-5 px-1 text-xs',
+              barMetrics,
               // One end treatment everywhere. An edge is rounded whenever it
               // is actually visible: the only edges that are not are the ones
               // a neighbouring slice bridges over inside the same week row.

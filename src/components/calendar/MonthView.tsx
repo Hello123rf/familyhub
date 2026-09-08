@@ -273,7 +273,7 @@ function MonthDayCell({
       {hoistedEvents.length > 0 && (
         <ul className="shrink-0 list-none m-0 px-1 pt-0 pb-0 flex flex-col gap-0.5">
           {hoistedEvents.map((event) => (
-            <li key={event.id} className="h-5 overflow-hidden">
+            <li key={event.id}>
               <InlineCalendarEvent event={event} onClick={onEventClick} />
             </li>
           ))}

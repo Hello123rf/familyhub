@@ -153,6 +153,56 @@ describe('SpanningEventRows', () => {
     expect(buttons[2]!.style.width).toBe('100%');
   });
 
+  it('sizes a bar from the same variables a day event uses', () => {
+    const rowDates = [new Date(2026, 7, 10), new Date(2026, 7, 11)];
+
+    const { container } = render(
+      <SpanningEventRows
+        date={new Date(2026, 7, 10)}
+        rowDates={rowDates}
+        events={[event]}
+        onEventClick={() => {}}
+        gap="1px"
+      />,
+    );
+
+    const bar = container.querySelector('button')!;
+    // No fixed height, and padding/type read from the event custom properties,
+    // so a bar and an all-day chip are the same object at any theme density.
+    expect(bar.className).not.toMatch(/\bh-5\b/);
+    expect(bar.className).toContain('px-[var(--event-padding-x,0.25rem)]');
+    expect(bar.className).toContain('text-[length:var(--event-font-size,0.75rem)]');
+  });
+
+  it('holds an empty lane open with an invisible bar, not a fixed height', () => {
+    const rowDates = [new Date(2026, 8, 20), new Date(2026, 8, 21), new Date(2026, 8, 22)];
+    const a: CalendarEvent = {
+      ...event, id: 'a',
+      startTime: new Date('2026-09-20T00:00:00.000Z'),
+      endTime: new Date('2026-09-22T00:00:00.000Z'),
+    };
+    const b: CalendarEvent = {
+      ...event, id: 'b',
+      startTime: new Date('2026-09-20T00:00:00.000Z'),
+      endTime: new Date('2026-09-23T00:00:00.000Z'),
+    };
+
+    const { container } = render(
+      <SpanningEventRows
+        date={new Date(2026, 8, 22)}
+        rowDates={rowDates}
+        events={[a, b]}
+        onEventClick={() => {}}
+        gap="1px"
+      />,
+    );
+
+    const blank = container.querySelector('[data-spanning-events]')!.children[0]!;
+    expect(blank.getAttribute('aria-hidden')).toBe('true');
+    expect(blank.className).toContain('invisible');
+    expect(blank.className).not.toMatch(/\bh-5\b/);
+  });
+
   it('wears the card surface in cards mode, with the colour on the leading edge', () => {
     const rowDates = [new Date(2026, 7, 10), new Date(2026, 7, 11)];
 
