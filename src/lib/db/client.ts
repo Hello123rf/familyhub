@@ -56,9 +56,9 @@ function getClient(): ReturnType<typeof postgres> {
     const connectionString = getConnectionString();
     _client = postgres(connectionString, {
       // Maximum number of connections in the pool
-      max: 10,
-      // Close idle connections after 30 seconds
-      idle_timeout: 30,
+      max: 3,
+      // Close idle connections after 20 seconds
+      idle_timeout: 20,
       // Timeout waiting for a connection from the pool
       connect_timeout: 10,
       // Prepare statements for better performance
