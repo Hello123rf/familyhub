@@ -289,7 +289,17 @@ export function SpanningEventRows({
               width: continuesWithinRow ? `calc(100% + ${gap} + ${CELL_PADDING_X * 2}px)` : '100%',
             }}
           >
-            {(!continuesFromPrevious || column === 0) && label}
+            {/*
+              A continuation slice carries no title: the label is printed on the
+              day the event starts and again after a week wrap, so it is not
+              repeated across every day it covers.
+
+              It still needs a line box. Without one its height collapses to the
+              padding alone, and since the height is now the theme's rather than
+              a fixed h-5, the bar became a ~4px sliver on every continuation
+              day — present, aligned, and invisible.
+            */}
+            {(!continuesFromPrevious || column === 0) ? label : '\u00A0'}
           </button>
         );
       })}

@@ -203,6 +203,43 @@ describe('SpanningEventRows', () => {
     expect(blank.className).not.toMatch(/\bh-5\b/);
   });
 
+  it('keeps a continuation slice full height even though it carries no title', () => {
+    // The regression this guards: a continuation slice prints no label, so once
+    // the height came from content rather than a fixed h-5 it collapsed to the
+    // padding alone — a few pixels tall, effectively invisible, on every day of
+    // a multi-day event after the first.
+    const rowDates = Array.from({ length: 7 }, (_, i) => new Date(2026, 8, 27 + i));
+    const trip: CalendarEvent = {
+      ...event,
+      id: 'trip',
+      title: 'Trip away',
+      startTime: new Date('2026-09-28T00:00:00.000Z'),
+      endTime: new Date('2026-10-01T00:00:00.000Z'),
+    };
+
+    const onDay = (index: number) => {
+      const { container } = render(
+        <SpanningEventRows
+          date={rowDates[index]!}
+          rowDates={rowDates}
+          events={[trip]}
+          onEventClick={() => {}}
+          gap="1px"
+        />,
+      );
+      return container.querySelector('button')!;
+    };
+
+    // Day it starts: the title.
+    expect(onDay(1).textContent).toBe('Trip away');
+    // Days it continues: no title, but never empty.
+    for (const index of [2, 3]) {
+      const bar = onDay(index);
+      expect(bar.textContent).not.toBe('');
+      expect(bar.textContent!.trim()).toBe('');
+    }
+  });
+
   it('wears the card surface in cards mode, with the colour on the leading edge', () => {
     const rowDates = [new Date(2026, 7, 10), new Date(2026, 7, 11)];
 
@@ -334,7 +371,10 @@ describe('SpanningEventRows', () => {
 
     const buttons = container.querySelectorAll('button');
     expect(buttons[0]!.textContent).toBe('18:00 Weekend trip');
-    expect(buttons[1]!.textContent).toBe('');
+    // No title repeated, but not empty either: a slice with no content at all
+    // has no line box and collapses to its padding.
+    expect(buttons[1]!.textContent!.trim()).toBe('');
+    expect(buttons[1]!.textContent).not.toBe('');
     expect(buttons[1]!.title).toBe('Weekend trip');
   });
 });
