@@ -228,10 +228,7 @@ export function SpanningEventRows({
         // padding showing as a break — invisible against a pale background,
         // obvious with grid lines on. Reaching backwards puts the overflow in
         // the cell that paints last, so it covers the seam instead.
-        // Cards mode never joins. A card has its own border and background, so
-        // reaching back would slide one card under another rather than
-        // continuing it. Each day gets a whole card instead.
-        const reachesBack = !cards && continuesFromPrevious && column > 0;
+        const reachesBack = continuesFromPrevious && column > 0;
         const roundLeft = !reachesBack;
         const roundRight = !continuesWithinRow;
         const past = isCalendarEventPast(
@@ -278,6 +275,10 @@ export function SpanningEventRows({
               roundLeft && 'rounded-l-md',
               roundRight && 'rounded-r-md',
               cards && 'bg-card/85 backdrop-blur-sm border shadow-sm text-foreground',
+              // Mid-pill edges carry no border, so a run of days reads as one
+              // outlined object rather than a row of cards butted together.
+              cards && reachesBack && 'border-l-0',
+              cards && continuesWithinRow && 'border-r-0',
               past && 'opacity-55 saturate-[0.65]'
             )}
             style={{
@@ -291,8 +292,16 @@ export function SpanningEventRows({
               // Outlined in the event's own colour, all the way round, so a
               // multi-day event is recognisable as one thing across the days it
               // covers without relying on the cards touching.
+              // The 3px colour edge marks where the event STARTS, so a
+              // continuation must not draw one: an inline width beats the
+              // border-l-0 class, and it painted as a bar across the seam it
+              // was supposed to be hiding.
               ...(cards
-                ? { borderColor: event.color, borderLeftColor: event.color, borderLeftWidth: 3 }
+                ? {
+                    borderColor: event.color,
+                    ...(reachesBack ? { borderLeftWidth: 0 } : { borderLeftWidth: 3 }),
+                    ...(continuesWithinRow ? { borderRightWidth: 0 } : {}),
+                  }
                 : {}),
               // Reaching back across this cell's left padding, the grid gap,
               // and the previous cell's right padding.
@@ -310,7 +319,7 @@ export function SpanningEventRows({
               a fixed h-5, the bar became a ~4px sliver on every continuation
               day — present, aligned, and invisible.
             */}
-            {cards || !continuesFromPrevious || column === 0 ? label : '\u00A0'}
+            {!continuesFromPrevious || column === 0 ? label : '\u00A0'}
           </button>
         );
       })}

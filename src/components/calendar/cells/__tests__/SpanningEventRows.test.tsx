@@ -260,11 +260,11 @@ describe('SpanningEventRows', () => {
     expect(bar.style.borderLeftWidth).toBe('3px');
   });
 
-  it('labels every day in cards mode, where a blank card reads as nothing', () => {
-    // In inline mode a continuation slice is deliberately unlabelled: it joins
-    // the previous day's bar and the run carries one label. A card cannot do
-    // that — it has its own border and background — so an unlabelled card is
-    // just an empty white box, which is what this guards against.
+  it('joins cards into one pill, labelled once, with no seam mid-run', () => {
+    // Cards join the same way bars do: the run is one outlined pill carrying a
+    // single label, with no border drawn on the edges a neighbouring slice
+    // covers. The earlier failure mode this still guards is a slice that is
+    // unlabelled AND unjoined, which renders as an empty white box.
     const rowDates = Array.from({ length: 7 }, (_, i) => new Date(2026, 8, 27 + i));
     const trip: CalendarEvent = {
       ...event,
@@ -283,10 +283,14 @@ describe('SpanningEventRows', () => {
       return container.querySelector('button')!;
     };
 
-    for (const index of [1, 2, 3]) {
-      expect(onDay(index).textContent).toBe('Trip away');
-      // And never slides under its neighbour: cards do not join.
-      expect(onDay(index).style.marginLeft).toBe('');
+    // Labelled where it starts.
+    expect(onDay(1).textContent).toBe('Trip away');
+    expect(onDay(1).style.marginLeft).toBe('');
+    // Continuation days join back over the seam and drop the left border, so
+    // the run is one object rather than a line of separate cards.
+    for (const index of [2, 3]) {
+      expect(onDay(index).style.marginLeft).toBe('calc(-1rem)');
+      expect(onDay(index).className).toContain('border-l-0');
     }
     // Outlined in the event's own colour rather than the generic border.
     expect(onDay(2).style.borderColor).not.toBe('');
