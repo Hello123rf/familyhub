@@ -83,8 +83,8 @@ services:
     container_name: prism-redis
     volumes:
       - redis-data:/data
-    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
-    mem_limit: 512m
+    command: redis-server --appendonly yes --maxmemory 64mb --maxmemory-policy allkeys-lru
+    mem_limit: 128m
     cpus: 1.0
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
