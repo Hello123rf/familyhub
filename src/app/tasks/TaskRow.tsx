@@ -8,13 +8,15 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/components/ui/use-toast';
+import { isShoppingListName } from '@/lib/constants/shoppingTaskSync';
 import type { Task } from '@/types';
 
 // Lists that mirror a Google Tasks "Shopping" list get a one-tap shortcut
 // into the real Shopping page (with grocery categories) instead of asking
-// the user to retype the item there. See move-to-shopping route for the
-// category-guessing logic.
-const SHOPPING_LIST_KEYWORDS = ['shopping', 'grocery', 'groceries'];
+// the user to retype the item there. This button is a manual, immediate
+// version of what autoShoppingSyncCron.ts does automatically every few
+// minutes for the same lists — see isShoppingListName for the shared
+// list-detection rule.
 
 export function TaskRow({
   task,
@@ -40,7 +42,7 @@ export function TaskRow({
   const daysUntil = dueDate ? differenceInDays(dueDate, new Date()) : null;
   const taskListId = (task as typeof task & { listId?: string }).listId;
   const taskList = showList ? taskLists.find(l => l.id === taskListId) : undefined;
-  const isShoppingList = !!taskList && SHOPPING_LIST_KEYWORDS.some((kw) => taskList.name.toLowerCase().includes(kw));
+  const isShoppingList = !!taskList && isShoppingListName(taskList.name);
 
   const handleMoveToShopping = async (e: React.MouseEvent) => {
     e.stopPropagation();
