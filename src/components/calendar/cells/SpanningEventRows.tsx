@@ -230,7 +230,17 @@ export function SpanningEventRows({
         // whatever height the theme's font and padding actually produce.
         if (!laneEvent) {
           return (
-            <div key={`lane-${lane}`} aria-hidden className={cn(barMetrics, 'invisible')}>
+            <div
+              key={`lane-${lane}`}
+              aria-hidden
+              // Same box as a real slice, borders included. In cards mode a
+              // slice carries a 1px border top and bottom; a placeholder
+              // without one is 2px shorter, so a bar sitting under a lane that
+              // is blank on one day and filled on the next rides up by 2px and
+              // the run looks broken. `invisible` hides it without changing
+              // what it occupies.
+              className={cn(barMetrics, cards && 'border', 'invisible')}
+            >
               &nbsp;
             </div>
           );
