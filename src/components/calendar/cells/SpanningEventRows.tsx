@@ -13,17 +13,24 @@ import {
 } from '@/lib/utils/timeFormat';
 
 /**
- * Horizontal padding on a day cell's event list: `px-1`, i.e. 0.25rem a side.
+ * How far a continuation slice reaches back over the seam between two cells.
  *
- * Bars are inset by the same amount so their caps line up with the single-day
- * chips beneath them, and a continuing bar adds it back twice to cross into the
- * next cell's content box.
+ * The seam is this cell's left padding, plus the gap between cells, plus the
+ * previous cell's right padding — and it differs per view. Measured: 8px in the
+ * month grid, 12.5px in the two-week view, whose cells carry a 1px border its
+ * `gap-1` class does not account for. A per-view constant would have to be
+ * re-derived every time a caller's chrome changed, and would fail silently as a
+ * hairline when it drifted.
  *
- * Stated in rem, not px. Hardcoding 4px assumed a 16px root; this app renders
- * at 14px, where 0.25rem is 3.5px, so every continuing bar was a pixel too wide
- * and overlapped its neighbour instead of meeting it.
+ * One generous value works instead, because **overshooting cannot show**. A
+ * slice only reaches back when the same event holds the same lane on the
+ * previous day, so the overshoot lands on that event's own slice: same colour,
+ * same height, and square-edged, since a slice that continues is not capped on
+ * that side. Undershooting leaves a visible gap; overshooting leaves nothing.
+ *
+ * 1rem clears the largest measured seam with room for a caller to add chrome.
  */
-const CELL_PADDING_X_BOTH_SIDES = '0.5rem';
+const SEAM_REACH = '1rem';
 
 export type SpanningEventRowsProps = {
   date: Date;
@@ -50,17 +57,6 @@ export type SpanningEventRowsProps = {
    * multi-day event entitles it to the top of the cell.
    */
   omitLeadingBlanks?: number;
-  /**
-   * The column gap this row's cells are laid out with, as a CSS length.
-   *
-   * A continuing slice widens by exactly this much so it meets the next day's
-   * slice across the gap. Required, not defaulted: a default silently
-   * disagreed with MonthView's `gap-px` for as long as it existed, widening
-   * every continuing bar by 3px more than the gap it was bridging, so bars
-   * bled into the neighbouring day. A caller that knows its grid should have
-   * to say so.
-   */
-  gap: string;
 };
 
 /**
@@ -124,7 +120,6 @@ export function SpanningEventRows({
   compact = false,
   cards = false,
   omitLeadingBlanks = 0,
-  gap,
 }: SpanningEventRowsProps) {
   const { timeFormat, displayTimezone } = useTimeFormat();
   const column = rowDates.findIndex((candidate) => isSameDay(candidate, date));
@@ -301,8 +296,8 @@ export function SpanningEventRows({
                 : {}),
               // Reaching back across this cell's left padding, the grid gap,
               // and the previous cell's right padding.
-              marginLeft: reachesBack ? `calc(-1 * (${gap} + ${CELL_PADDING_X_BOTH_SIDES}))` : undefined,
-              width: reachesBack ? `calc(100% + ${gap} + ${CELL_PADDING_X_BOTH_SIDES})` : '100%',
+              marginLeft: reachesBack ? `calc(-1 * ${SEAM_REACH})` : undefined,
+              width: reachesBack ? `calc(100% + ${SEAM_REACH})` : '100%',
             }}
           >
             {/*

@@ -46,7 +46,6 @@ describe('SpanningEventRows', () => {
         rowDates={rowDates}
         events={spans}
         onEventClick={() => {}}
-        gap="1px"
       />,
     );
 
@@ -77,7 +76,6 @@ describe('SpanningEventRows', () => {
         rowDates={rowDates}
         events={[a, b]}
         onEventClick={() => {}}
-        gap="1px"
       />,
     );
 
@@ -111,7 +109,6 @@ describe('SpanningEventRows', () => {
         rowDates={rowDates}
         events={[...done, later]}
         onEventClick={() => {}}
-        gap="1px"
       />,
     );
 
@@ -132,7 +129,6 @@ describe('SpanningEventRows', () => {
             rowDates={rowDates}
             events={[event]}
             onEventClick={() => {}}
-            gap="1px"
           />
         ))}
       </div>
@@ -147,13 +143,16 @@ describe('SpanningEventRows', () => {
     // the earlier one reaching forward: a later cell paints on top of an
     // earlier one, so only the later slice's overflow is actually visible.
     expect(buttons[0]!.style.marginLeft).toBe('');
-    expect(buttons[1]!.style.marginLeft).toBe('calc(-1 * (1px + 0.5rem))');
-    expect(buttons[2]!.style.marginLeft).toBe('calc(-1 * (1px + 0.5rem))');
+    // One generous reach, not a per-view sum: the seam differs between views
+    // (8px in the month grid, 12.5px in the two-week view) and overshooting is
+    // invisible, because a slice only reaches back over its own event's slice.
+    expect(buttons[1]!.style.marginLeft).toBe('calc(-1rem)');
+    expect(buttons[2]!.style.marginLeft).toBe('calc(-1rem)');
     // 1px grid gap plus a cell's padding on each side, kept in rem so it stays
     // correct at this app's 14px root rather than assuming 16px.
     expect(buttons[0]!.style.width).toBe('100%');
-    expect(buttons[1]!.style.width).toBe('calc(100% + (1px + 0.5rem))');
-    expect(buttons[2]!.style.width).toBe('calc(100% + (1px + 0.5rem))');
+    expect(buttons[1]!.style.width).toBe('calc(100% + 1rem)');
+    expect(buttons[2]!.style.width).toBe('calc(100% + 1rem)');
   });
 
   it('sizes a bar from the same variables a day event uses', () => {
@@ -165,7 +164,6 @@ describe('SpanningEventRows', () => {
         rowDates={rowDates}
         events={[event]}
         onEventClick={() => {}}
-        gap="1px"
       />,
     );
 
@@ -196,7 +194,6 @@ describe('SpanningEventRows', () => {
         rowDates={rowDates}
         events={[a, b]}
         onEventClick={() => {}}
-        gap="1px"
       />,
     );
 
@@ -227,7 +224,6 @@ describe('SpanningEventRows', () => {
           rowDates={rowDates}
           events={[trip]}
           onEventClick={() => {}}
-          gap="1px"
         />,
       );
       return container.querySelector('button')!;
@@ -253,7 +249,6 @@ describe('SpanningEventRows', () => {
         events={[event]}
         onEventClick={() => {}}
         cards
-        gap="1px"
       />,
     );
 
@@ -282,7 +277,7 @@ describe('SpanningEventRows', () => {
       const { container } = render(
         <SpanningEventRows
           date={rowDates[index]!} rowDates={rowDates} events={[trip]}
-          onEventClick={() => {}} cards gap="1px"
+          onEventClick={() => {}} cards
         />,
       );
       return container.querySelector('button')!;
@@ -306,7 +301,6 @@ describe('SpanningEventRows', () => {
         rowDates={rowDates}
         events={[event]}
         onEventClick={() => {}}
-        gap="1px"
       />,
     );
 
@@ -332,7 +326,6 @@ describe('SpanningEventRows', () => {
             rowDates={rowDates}
             events={[wrappingEvent]}
             onEventClick={() => {}}
-            gap="1px"
           />
         ))}
       </div>
@@ -366,7 +359,6 @@ describe('SpanningEventRows', () => {
         rowDates={[new Date(2099, 7, 10)]}
         events={[futureEvent]}
         onEventClick={() => {}}
-        gap="1px"
       />
     );
 
@@ -392,14 +384,12 @@ describe('SpanningEventRows', () => {
           rowDates={rowDates}
           events={[timedEvent]}
           onEventClick={() => {}}
-        gap="1px"
       />
         <SpanningEventRows
           date={continuationDay}
           rowDates={rowDates}
           events={[timedEvent]}
           onEventClick={() => {}}
-        gap="1px"
       />
       </div>
     );
