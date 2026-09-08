@@ -1,12 +1,20 @@
 'use client';
 
+import { useState } from 'react';
 import { format, isPast, differenceInDays, formatDistanceToNow } from 'date-fns';
-import { CalendarDays, Settings, Trash2 } from 'lucide-react';
+import { CalendarDays, Settings, Trash2, ShoppingCart } from 'lucide-react';
 import { UserAvatar } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { toast } from '@/components/ui/use-toast';
 import type { Task } from '@/types';
+
+// Lists that mirror a Google Tasks "Shopping" list get a one-tap shortcut
+// into the real Shopping page (with grocery categories) instead of asking
+// the user to retype the item there. See move-to-shopping route for the
+// category-guessing logic.
+const SHOPPING_LIST_KEYWORDS = ['shopping', 'grocery', 'groceries'];
 
 export function TaskRow({
   task,
@@ -26,10 +34,32 @@ export function TaskRow({
   showList?: boolean;
   taskLists?: Array<{ id: string; name: string; color?: string | null }>;
 }) {
+  const [moving, setMoving] = useState(false);
   const dueDate = task.dueDate ? new Date(task.dueDate) : null;
   const isOverdue = dueDate && !task.completed && isPast(dueDate);
   const daysUntil = dueDate ? differenceInDays(dueDate, new Date()) : null;
-  const taskList = showList ? taskLists.find(l => l.id === (task as typeof task & { listId?: string }).listId) : null;
+  const taskListId = (task as typeof task & { listId?: string }).listId;
+  const taskList = showList ? taskLists.find(l => l.id === taskListId) : undefined;
+  const isShoppingList = !!taskList && SHOPPING_LIST_KEYWORDS.some((kw) => taskList.name.toLowerCase().includes(kw));
+
+  const handleMoveToShopping = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setMoving(true);
+    try {
+      const res = await fetch(`/api/tasks/${task.id}/move-to-shopping`, { method: 'POST' });
+      if (!res.ok) throw new Error('Failed to move item');
+      const data = await res.json();
+      toast({
+        title: `Added to ${data.listName}`,
+        description: data.category ? `Categorized as ${data.category}` : 'Tap it to set a category',
+      });
+      if (!task.completed) onToggle();
+    } catch {
+      toast({ title: 'Could not move item to Shopping', variant: 'destructive' });
+    } finally {
+      setMoving(false);
+    }
+  };
 
   return (
     <div
@@ -84,6 +114,19 @@ export function TaskRow({
         <div className="flex items-center gap-1 shrink-0">
           {task.priority === 'high' && (
             <Badge variant="destructive" className="text-xs">!</Badge>
+          )}
+          {isShoppingList && !task.completed && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-1.5 gap-1 text-xs opacity-70 hover:opacity-100 text-primary"
+              onClick={handleMoveToShopping}
+              disabled={moving}
+              aria-label="Move to Shopping list"
+              title="Move to Shopping list"
+            >
+              <ShoppingCart className="h-3 w-3" />
+            </Button>
           )}
           <Button
             variant="ghost"
