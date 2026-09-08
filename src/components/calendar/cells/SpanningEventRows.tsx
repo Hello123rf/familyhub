@@ -13,13 +13,17 @@ import {
 } from '@/lib/utils/timeFormat';
 
 /**
- * Horizontal padding on a day cell's event list, in px (`px-1`).
+ * Horizontal padding on a day cell's event list: `px-1`, i.e. 0.25rem a side.
  *
  * Bars are inset by the same amount so their caps line up with the single-day
  * chips beneath them, and a continuing bar adds it back twice to cross into the
  * next cell's content box.
+ *
+ * Stated in rem, not px. Hardcoding 4px assumed a 16px root; this app renders
+ * at 14px, where 0.25rem is 3.5px, so every continuing bar was a pixel too wide
+ * and overlapped its neighbour instead of meeting it.
  */
-const CELL_PADDING_X = 4;
+const CELL_PADDING_X_BOTH_SIDES = '0.5rem';
 
 export type SpanningEventRowsProps = {
   date: Date;
@@ -286,7 +290,7 @@ export function SpanningEventRows({
                 : {}),
               // Reaching the next day's slice now means covering this cell's
               // right padding, the grid gap, and the next cell's left padding.
-              width: continuesWithinRow ? `calc(100% + ${gap} + ${CELL_PADDING_X * 2}px)` : '100%',
+              width: continuesWithinRow ? `calc(100% + ${gap} + ${CELL_PADDING_X_BOTH_SIDES})` : '100%',
             }}
           >
             {/*

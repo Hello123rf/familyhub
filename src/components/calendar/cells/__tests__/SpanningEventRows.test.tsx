@@ -146,10 +146,10 @@ describe('SpanningEventRows', () => {
     expect(buttons[0]!.style.marginLeft).toBe('');
     expect(buttons[1]!.style.marginLeft).toBe('');
     expect(buttons[2]!.style.marginLeft).toBe('');
-    // 1px grid gap plus this cell's 4px right padding and the next cell's 4px
-    // left padding, folded to 9px by the CSSOM.
-    expect(buttons[0]!.style.width).toBe('calc(100% + 9px)');
-    expect(buttons[1]!.style.width).toBe('calc(100% + 9px)');
+    // 1px grid gap plus a cell's padding on each side, kept in rem so it stays
+    // correct at this app's 14px root rather than assuming 16px.
+    expect(buttons[0]!.style.width).toBe('calc(100% + (1px + 0.5rem))');
+    expect(buttons[1]!.style.width).toBe('calc(100% + (1px + 0.5rem))');
     expect(buttons[2]!.style.width).toBe('100%');
   });
 
