@@ -27,6 +27,13 @@ interface ShoppingCategoryCardProps {
   onTouchStart: (e: React.TouchEvent) => void;
   onTouchMove: (e: React.TouchEvent) => void;
   onTouchEnd: () => void;
+  /** Item-to-category drag (recategorize), separate from the card-reorder drag above. */
+  draggedItemId?: string | null;
+  isDragOverForItem?: boolean;
+  onItemDragStart?: (e: React.DragEvent, item: ShoppingItem) => void;
+  onItemDragEnd?: () => void;
+  onItemDragOverCategory?: (e: React.DragEvent) => void;
+  onItemDropOnCategory?: (e: React.DragEvent) => void;
   onToggleItem: (itemId: string) => void;
   onEditItem: (item: ShoppingItem) => void;
   onDeleteItem: (itemId: string) => void;
@@ -55,6 +62,12 @@ export function ShoppingCategoryCard({
   onTouchStart,
   onTouchMove,
   onTouchEnd,
+  draggedItemId,
+  isDragOverForItem = false,
+  onItemDragStart,
+  onItemDragEnd,
+  onItemDragOverCategory,
+  onItemDropOnCategory,
   onToggleItem,
   onEditItem,
   onDeleteItem,
@@ -70,7 +83,11 @@ export function ShoppingCategoryCard({
       data-category={category}
       draggable={!isMobile}
       onDragStart={!isMobile ? onDragStart : undefined}
-      onDragOver={!isMobile ? onDragOver : undefined}
+      onDragOver={(e) => {
+        if (!isMobile) onDragOver(e);
+        onItemDragOverCategory?.(e);
+      }}
+      onDrop={onItemDropOnCategory}
       onDragEnd={!isMobile ? onDragEnd : undefined}
       onTouchStart={!isMobile ? onTouchStart : undefined}
       onTouchMove={!isMobile ? onTouchMove : undefined}
@@ -79,7 +96,8 @@ export function ShoppingCategoryCard({
         'border-2 rounded-lg overflow-hidden bg-card/90 backdrop-blur-xs',
         'flex flex-col transition-all',
         !isMobile && 'cursor-grab active:cursor-grabbing touch-none',
-        isDragging && 'opacity-50 scale-95 ring-4 ring-primary/50'
+        isDragging && 'opacity-50 scale-95 ring-4 ring-primary/50',
+        isDragOverForItem && 'ring-4 ring-primary/70 scale-[1.02]'
       )}
       style={{ borderColor: categoryColor }}
     >
@@ -121,6 +139,10 @@ export function ShoppingCategoryCard({
               onToggle={() => onToggleItem(item.id)}
               onEdit={() => onEditItem(item)}
               onDelete={() => onDeleteItem(item.id)}
+              draggable={!isMobile && !!onItemDragStart}
+              onDragStart={(e) => onItemDragStart?.(e, item)}
+              onDragEnd={onItemDragEnd}
+              isBeingDragged={draggedItemId === item.id}
             />
           </div>
         ))}

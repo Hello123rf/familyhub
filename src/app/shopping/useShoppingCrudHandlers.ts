@@ -95,6 +95,20 @@ export function useShoppingCrudHandlers(deps: CrudDeps) {
     }
   };
 
+  /** Drag-and-drop recategorize: no modal, no editingItem state involved. */
+  const handleMoveItemCategory = async (item: ShoppingItem, newCategory: string) => {
+    try {
+      const response = await fetch(`/api/shopping-items/${item.id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category: newCategory }),
+      });
+      if (!response.ok) throw new Error('Failed to move item');
+      refreshLists();
+    } catch {
+      toast({ title: 'Failed to move item. Please try again.', variant: 'destructive' });
+    }
+  };
+
   const handleSaveList = async (listData: { name: string; description?: string; assignedTo?: string; listType?: string; visibleCategories?: string[] | null }) => {
     try {
       if (editingList) {
@@ -134,5 +148,5 @@ export function useShoppingCrudHandlers(deps: CrudDeps) {
     }
   } : undefined;
 
-  return { handleAddItem, handleNewList, handleEditItem, handleDeleteItem, handleSaveNewItem, handleUpdateItem, handleSaveList, handleDeleteList };
+  return { handleAddItem, handleNewList, handleEditItem, handleDeleteItem, handleSaveNewItem, handleUpdateItem, handleMoveItemCategory, handleSaveList, handleDeleteList };
 }

@@ -11,11 +11,20 @@ export function ShoppingItemRow({
   onToggle,
   onEdit,
   onDelete,
+  draggable = false,
+  onDragStart,
+  onDragEnd,
+  isBeingDragged = false,
 }: {
   item: ShoppingItem;
   onToggle: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  /** Desktop-only recategorize-by-drag; omitted call sites get no drag affordance. */
+  draggable?: boolean;
+  onDragStart?: (e: React.DragEvent) => void;
+  onDragEnd?: () => void;
+  isBeingDragged?: boolean;
 }) {
   const quantityDisplay = item.quantity
     ? `${item.quantity}${item.unit ? ` ${item.unit}` : ''}`
@@ -24,10 +33,15 @@ export function ShoppingItemRow({
   return (
     <div
       id={`shopping-item-${item.id}`}
+      draggable={draggable}
+      onDragStart={draggable ? onDragStart : undefined}
+      onDragEnd={draggable ? onDragEnd : undefined}
       className={cn(
         'flex items-center gap-2 py-1 px-2 rounded cursor-pointer',
         'hover:bg-muted/50 transition-all group',
-        item.checked && 'opacity-60'
+        item.checked && 'opacity-60',
+        draggable && 'cursor-grab active:cursor-grabbing',
+        isBeingDragged && 'opacity-40'
       )}
       onClick={onToggle}
     >
