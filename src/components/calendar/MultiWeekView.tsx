@@ -92,8 +92,11 @@ export function MultiWeekView({
   // Scope the wide event list to the visible weeks once, so the spanning +
   // per-day filters iterate the local slice instead of thousands of events.
   const scopedEvents = eventsOverlappingRange(events, weekStart, addDays(weekStart, weekCount * 7));
+  // Every all-day event goes in the lane band, not just the multi-day ones, so
+  // a single-day event can take a lane a multi-day one leaves free above
+  // itself. Same rule as MonthView; see the note there.
   const spanningEvents = scopedEvents
-    .filter((event) => eventSpansMultipleDisplayDays(
+    .filter((event) => event.allDay || eventSpansMultipleDisplayDays(
       event.startTime,
       event.endTime,
       event.allDay,
