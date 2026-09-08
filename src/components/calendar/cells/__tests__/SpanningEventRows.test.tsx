@@ -120,7 +120,7 @@ describe('SpanningEventRows', () => {
     expect(wrapper!.children[0]!.getAttribute('aria-hidden')).toBeNull();
   });
 
-  it('bridges day gaps without overlapping adjacent event slices', () => {
+  it('joins a run by reaching back from each later slice', () => {
     const rowDates = [new Date(2026, 7, 10), new Date(2026, 7, 11), new Date(2026, 7, 12)];
 
     const { container } = render(
@@ -143,14 +143,17 @@ describe('SpanningEventRows', () => {
 
     expect(rows).toHaveLength(3);
     expect(buttons).toHaveLength(3);
+    // The run is joined by each later slice reaching BACK over the seam, not by
+    // the earlier one reaching forward: a later cell paints on top of an
+    // earlier one, so only the later slice's overflow is actually visible.
     expect(buttons[0]!.style.marginLeft).toBe('');
-    expect(buttons[1]!.style.marginLeft).toBe('');
-    expect(buttons[2]!.style.marginLeft).toBe('');
+    expect(buttons[1]!.style.marginLeft).toBe('calc(-1 * (1px + 0.5rem))');
+    expect(buttons[2]!.style.marginLeft).toBe('calc(-1 * (1px + 0.5rem))');
     // 1px grid gap plus a cell's padding on each side, kept in rem so it stays
     // correct at this app's 14px root rather than assuming 16px.
-    expect(buttons[0]!.style.width).toBe('calc(100% + (1px + 0.5rem))');
+    expect(buttons[0]!.style.width).toBe('100%');
     expect(buttons[1]!.style.width).toBe('calc(100% + (1px + 0.5rem))');
-    expect(buttons[2]!.style.width).toBe('100%');
+    expect(buttons[2]!.style.width).toBe('calc(100% + (1px + 0.5rem))');
   });
 
   it('sizes a bar from the same variables a day event uses', () => {
@@ -260,6 +263,38 @@ describe('SpanningEventRows', () => {
     // The event colour moves to the leading edge instead of filling the bar.
     expect(bar.style.backgroundColor).toBe('');
     expect(bar.style.borderLeftWidth).toBe('3px');
+  });
+
+  it('labels every day in cards mode, where a blank card reads as nothing', () => {
+    // In inline mode a continuation slice is deliberately unlabelled: it joins
+    // the previous day's bar and the run carries one label. A card cannot do
+    // that — it has its own border and background — so an unlabelled card is
+    // just an empty white box, which is what this guards against.
+    const rowDates = Array.from({ length: 7 }, (_, i) => new Date(2026, 8, 27 + i));
+    const trip: CalendarEvent = {
+      ...event,
+      id: 'trip',
+      title: 'Trip away',
+      startTime: new Date('2026-09-28T00:00:00.000Z'),
+      endTime: new Date('2026-10-01T00:00:00.000Z'),
+    };
+    const onDay = (index: number) => {
+      const { container } = render(
+        <SpanningEventRows
+          date={rowDates[index]!} rowDates={rowDates} events={[trip]}
+          onEventClick={() => {}} cards gap="1px"
+        />,
+      );
+      return container.querySelector('button')!;
+    };
+
+    for (const index of [1, 2, 3]) {
+      expect(onDay(index).textContent).toBe('Trip away');
+      // And never slides under its neighbour: cards do not join.
+      expect(onDay(index).style.marginLeft).toBe('');
+    }
+    // Outlined in the event's own colour rather than the generic border.
+    expect(onDay(2).style.borderColor).not.toBe('');
   });
 
   it('keeps filling with the event colour when cards mode is off', () => {

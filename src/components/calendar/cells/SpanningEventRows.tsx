@@ -224,10 +224,20 @@ export function SpanningEventRows({
         const continuesFromPrevious = occurs(event, addDays(date, -1));
         const continuesToNext = occurs(event, addDays(date, 1));
         const continuesWithinRow = continuesToNext && column < rowDates.length - 1;
-        // Visible edges: the left one is hidden only when yesterday's slice
-        // bridges across it, the right one only when this slice bridges into
-        // tomorrow's.
-        const roundLeft = !(continuesFromPrevious && column > 0);
+        // A run is joined by the LATER slice reaching back, not the earlier one
+        // reaching forward.
+        //
+        // Day cells are positioned siblings, so a later cell paints on top of
+        // an earlier one. A slice overflowing to the right disappeared behind
+        // the next cell's own background, leaving the grid gap and a cell's
+        // padding showing as a break — invisible against a pale background,
+        // obvious with grid lines on. Reaching backwards puts the overflow in
+        // the cell that paints last, so it covers the seam instead.
+        // Cards mode never joins. A card has its own border and background, so
+        // reaching back would slide one card under another rather than
+        // continuing it. Each day gets a whole card instead.
+        const reachesBack = !cards && continuesFromPrevious && column > 0;
+        const roundLeft = !reachesBack;
         const roundRight = !continuesWithinRow;
         const past = isCalendarEventPast(
           event.startTime,
@@ -272,9 +282,7 @@ export function SpanningEventRows({
               // these off along with every other chip.
               roundLeft && 'rounded-l-md',
               roundRight && 'rounded-r-md',
-              cards && 'bg-card/85 backdrop-blur-sm border-y border-border/40 shadow-sm text-foreground',
-              cards && roundLeft && 'border-l',
-              cards && roundRight && 'border-r border-border/40',
+              cards && 'bg-card/85 backdrop-blur-sm border shadow-sm text-foreground',
               past && 'opacity-55 saturate-[0.65]'
             )}
             style={{
@@ -285,12 +293,16 @@ export function SpanningEventRows({
               // separate cards.
               backgroundColor: cards ? undefined : event.color,
               color: cards ? undefined : past ? contrastText(event.color) : '#fff',
-              ...(cards && roundLeft
-                ? { borderLeftColor: event.color, borderLeftWidth: 3, borderLeftStyle: 'solid' as const }
+              // Outlined in the event's own colour, all the way round, so a
+              // multi-day event is recognisable as one thing across the days it
+              // covers without relying on the cards touching.
+              ...(cards
+                ? { borderColor: event.color, borderLeftColor: event.color, borderLeftWidth: 3 }
                 : {}),
-              // Reaching the next day's slice now means covering this cell's
-              // right padding, the grid gap, and the next cell's left padding.
-              width: continuesWithinRow ? `calc(100% + ${gap} + ${CELL_PADDING_X_BOTH_SIDES})` : '100%',
+              // Reaching back across this cell's left padding, the grid gap,
+              // and the previous cell's right padding.
+              marginLeft: reachesBack ? `calc(-1 * (${gap} + ${CELL_PADDING_X_BOTH_SIDES}))` : undefined,
+              width: reachesBack ? `calc(100% + ${gap} + ${CELL_PADDING_X_BOTH_SIDES})` : '100%',
             }}
           >
             {/*
@@ -303,7 +315,7 @@ export function SpanningEventRows({
               a fixed h-5, the bar became a ~4px sliver on every continuation
               day — present, aligned, and invisible.
             */}
-            {(!continuesFromPrevious || column === 0) ? label : '\u00A0'}
+            {cards || !continuesFromPrevious || column === 0 ? label : '\u00A0'}
           </button>
         );
       })}
