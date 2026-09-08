@@ -96,8 +96,18 @@ export function MonthView({
   // Scope the wide event list to this month grid's visible range once, so the
   // spanning + per-day filters iterate ~40 events instead of thousands.
   const scopedEvents = eventsOverlappingRange(events, calendarStart, calendarEnd);
+  // Every all-day event goes in the lane band, not just the multi-day ones.
+  //
+  // Lanes are what stop a bar moving up and down as it crosses the week, and a
+  // single-day event that sits outside them cannot fill the space one leaves
+  // above itself. Put both kinds in the same system and the packing does it:
+  // if a three-day event took lane 1 because lane 0 was busy on its first day,
+  // a single-day event starting on its second day takes lane 0, because lane 0
+  // is free by then.
+  //
+  // A single-day event simply occupies one column, so it needs no special case.
   const spanningEvents = scopedEvents
-    .filter((event) => eventSpansMultipleDisplayDays(
+    .filter((event) => event.allDay || eventSpansMultipleDisplayDays(
       event.startTime,
       event.endTime,
       event.allDay,
@@ -232,17 +242,6 @@ function MonthDayCell({
   const today = isSameDay(date, toDisplayDate(new Date(), displayTimezone));
   const droppable = useDayDroppable({ date, enabled: cards && enableDnd });
 
-  // The day's own all-day events sit ABOVE the multi-day bars.
-  //
-  // Nothing about a multi-day event earns it the top of the cell, and a run of
-  // unlabelled continuation bars above a day's actual content reads as wasted
-  // space. So a cell goes: this day's all-day events, then the bars crossing
-  // it, then the timed list.
-  //
-  // Inline mode only for now: in cards mode the two are different heights and
-  // the result needs looking at before it is worth doing.
-  const ownAllDay = cards ? [] : dayEvents.filter((event) => event.allDay);
-  const remainingEvents = cards ? dayEvents : dayEvents.filter((event) => !event.allDay);
 
   return (
     <div
@@ -269,22 +268,13 @@ function MonthDayCell({
         </span>
       </div>
 
-      {ownAllDay.length > 0 && (
-        <ul className="shrink-0 list-none m-0 px-1 pt-0 pb-0 flex flex-col gap-[var(--event-gap,0.125rem)] mb-[var(--event-gap,0.125rem)]">
-          {ownAllDay.map((event) => (
-            <li key={event.id}>
-              <InlineCalendarEvent event={event} onClick={onEventClick} />
-            </li>
-          ))}
-        </ul>
-      )}
-
       <SpanningEventRows
         date={date}
         rowDates={rowDates}
         events={spanningEvents}
         onEventClick={onEventClick}
         cards={cards}
+        gap="1px"
       />
 
       {cards ? (
@@ -301,7 +291,7 @@ function MonthDayCell({
         // Row gap follows the theme's events mode; the fallback is the
         // 0.125rem that space-y-0.5 used to hard-code.
         <ul className="flex-1 overflow-y-auto list-none m-0 px-1 pb-1 pt-0 flex flex-col gap-[var(--event-gap,0.125rem)]">
-          {remainingEvents.map((event) => (
+          {dayEvents.map((event) => (
             <li key={event.id}>
               <InlineCalendarEvent event={event} onClick={onEventClick} />
             </li>

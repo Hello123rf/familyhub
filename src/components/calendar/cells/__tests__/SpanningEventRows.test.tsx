@@ -46,10 +46,45 @@ describe('SpanningEventRows', () => {
         rowDates={rowDates}
         events={spans}
         onEventClick={() => {}}
+        gap="1px"
       />,
     );
 
     expect(container.querySelector('[data-spanning-events]')).toBeNull();
+  });
+
+  it('keeps a lane open when a bar really is drawn below it', () => {
+    // A holds lane 0 on the 20th and 21st; B overlaps it so it takes lane 1 and
+    // keeps it. On the 22nd A is over, but lane 0 stays blank so B does not
+    // jump up a row midway through its own span.
+    const rowDates = [new Date(2026, 8, 20), new Date(2026, 8, 21), new Date(2026, 8, 22)];
+    const a: CalendarEvent = {
+      ...event,
+      id: 'a',
+      startTime: new Date('2026-09-20T00:00:00.000Z'),
+      endTime: new Date('2026-09-22T00:00:00.000Z'),
+    };
+    const b: CalendarEvent = {
+      ...event,
+      id: 'b',
+      startTime: new Date('2026-09-20T00:00:00.000Z'),
+      endTime: new Date('2026-09-23T00:00:00.000Z'),
+    };
+
+    const { container } = render(
+      <SpanningEventRows
+        date={new Date(2026, 8, 22)}
+        rowDates={rowDates}
+        events={[a, b]}
+        onEventClick={() => {}}
+        gap="1px"
+      />,
+    );
+
+    const wrapper = container.querySelector('[data-spanning-events]');
+    expect(wrapper).not.toBeNull();
+    expect(wrapper!.children).toHaveLength(2);
+    expect(wrapper!.children[0]!.getAttribute('aria-hidden')).toBe('true');
   });
 
   it('reuses a lane an earlier span has finished with', () => {
@@ -76,6 +111,7 @@ describe('SpanningEventRows', () => {
         rowDates={rowDates}
         events={[...done, later]}
         onEventClick={() => {}}
+        gap="1px"
       />,
     );
 
@@ -84,7 +120,7 @@ describe('SpanningEventRows', () => {
     expect(wrapper!.children[0]!.getAttribute('aria-hidden')).toBeNull();
   });
 
-  it('keeps every slice inside its own cell', () => {
+  it('bridges day gaps without overlapping adjacent event slices', () => {
     const rowDates = [new Date(2026, 7, 10), new Date(2026, 7, 11), new Date(2026, 7, 12)];
 
     const { container } = render(
@@ -96,6 +132,7 @@ describe('SpanningEventRows', () => {
             rowDates={rowDates}
             events={[event]}
             onEventClick={() => {}}
+            gap="1px"
           />
         ))}
       </div>
@@ -109,12 +146,10 @@ describe('SpanningEventRows', () => {
     expect(buttons[0]!.style.marginLeft).toBe('');
     expect(buttons[1]!.style.marginLeft).toBe('');
     expect(buttons[2]!.style.marginLeft).toBe('');
-    // No slice reaches past its own cell. Bridging into the neighbour existed
-    // to join a run into one bar; the day's own all-day events now sit above
-    // the bars, so a bar sits at a different height each day and there is
-    // nothing to join.
-    expect(buttons[0]!.style.width).toBe('100%');
-    expect(buttons[1]!.style.width).toBe('100%');
+    // 1px grid gap plus a cell's padding on each side, kept in rem so it stays
+    // correct at this app's 14px root rather than assuming 16px.
+    expect(buttons[0]!.style.width).toBe('calc(100% + (1px + 0.5rem))');
+    expect(buttons[1]!.style.width).toBe('calc(100% + (1px + 0.5rem))');
     expect(buttons[2]!.style.width).toBe('100%');
   });
 
@@ -127,6 +162,7 @@ describe('SpanningEventRows', () => {
         rowDates={rowDates}
         events={[event]}
         onEventClick={() => {}}
+        gap="1px"
       />,
     );
 
@@ -138,7 +174,36 @@ describe('SpanningEventRows', () => {
     expect(bar.className).toContain('text-[length:var(--event-font-size,0.75rem)]');
   });
 
-  it('labels every day of a multi-day event', () => {
+  it('holds an empty lane open with an invisible bar, not a fixed height', () => {
+    const rowDates = [new Date(2026, 8, 20), new Date(2026, 8, 21), new Date(2026, 8, 22)];
+    const a: CalendarEvent = {
+      ...event, id: 'a',
+      startTime: new Date('2026-09-20T00:00:00.000Z'),
+      endTime: new Date('2026-09-22T00:00:00.000Z'),
+    };
+    const b: CalendarEvent = {
+      ...event, id: 'b',
+      startTime: new Date('2026-09-20T00:00:00.000Z'),
+      endTime: new Date('2026-09-23T00:00:00.000Z'),
+    };
+
+    const { container } = render(
+      <SpanningEventRows
+        date={new Date(2026, 8, 22)}
+        rowDates={rowDates}
+        events={[a, b]}
+        onEventClick={() => {}}
+        gap="1px"
+      />,
+    );
+
+    const blank = container.querySelector('[data-spanning-events]')!.children[0]!;
+    expect(blank.getAttribute('aria-hidden')).toBe('true');
+    expect(blank.className).toContain('invisible');
+    expect(blank.className).not.toMatch(/\bh-5\b/);
+  });
+
+  it('keeps a continuation slice full height even though it carries no title', () => {
     // The regression this guards: a continuation slice prints no label, so once
     // the height came from content rather than a fixed h-5 it collapsed to the
     // padding alone — a few pixels tall, effectively invisible, on every day of
@@ -159,16 +224,19 @@ describe('SpanningEventRows', () => {
           rowDates={rowDates}
           events={[trip]}
           onEventClick={() => {}}
+          gap="1px"
         />,
       );
       return container.querySelector('button')!;
     };
 
-    // Every day it covers says what it is. Withholding the title made sense
-    // while slices joined into one bar carrying a single label; they no longer
-    // join, so an unlabelled slice is a coloured strip explaining nothing.
-    for (const index of [1, 2, 3]) {
-      expect(onDay(index).textContent).toBe('Trip away');
+    // Day it starts: the title.
+    expect(onDay(1).textContent).toBe('Trip away');
+    // Days it continues: no title, but never empty.
+    for (const index of [2, 3]) {
+      const bar = onDay(index);
+      expect(bar.textContent).not.toBe('');
+      expect(bar.textContent!.trim()).toBe('');
     }
   });
 
@@ -182,6 +250,7 @@ describe('SpanningEventRows', () => {
         events={[event]}
         onEventClick={() => {}}
         cards
+        gap="1px"
       />,
     );
 
@@ -202,6 +271,7 @@ describe('SpanningEventRows', () => {
         rowDates={rowDates}
         events={[event]}
         onEventClick={() => {}}
+        gap="1px"
       />,
     );
 
@@ -210,7 +280,7 @@ describe('SpanningEventRows', () => {
     expect(bar.className).not.toContain('bg-card/85');
   });
 
-  it('caps every slice at both ends, on every day it covers', () => {
+  it('caps a week-wrapping event at the row edges and joins it mid-row', () => {
     const wrappingEvent: CalendarEvent = {
       ...event,
       startTime: new Date('2026-08-09T00:00:00.000Z'),
@@ -227,6 +297,7 @@ describe('SpanningEventRows', () => {
             rowDates={rowDates}
             events={[wrappingEvent]}
             onEventClick={() => {}}
+            gap="1px"
           />
         ))}
       </div>
@@ -235,14 +306,16 @@ describe('SpanningEventRows', () => {
     const buttons = container.querySelectorAll('button');
     expect(buttons).toHaveLength(7);
     expect(buttons[0]!.textContent).toBe('Family trip');
-    // Every slice is a self-contained chip: both ends capped, on every day,
-    // with the radius following --radius like every other event.
-    for (const bar of buttons) {
-      expect(bar.className).toContain('rounded-l-md');
-      expect(bar.className).toContain('rounded-r-md');
-      expect(bar.style.clipPath).toBe('');
-      expect(bar.style.width).toBe('100%');
-    }
+    // A week-wrapping event ends in a cap like everything else. Chevrons are
+    // gone: one end treatment across the whole grid, and the radius follows
+    // --radius so a square theme squares these off too.
+    expect(buttons[0]!.className).toContain('rounded-l-md');
+    expect(buttons[6]!.className).toContain('rounded-r-md');
+    expect(buttons[0]!.style.clipPath).toBe('');
+    expect(buttons[6]!.style.clipPath).toBe('');
+    // Mid-row edges stay open, so adjacent slices still read as one bar.
+    expect(buttons[3]!.className).not.toContain('rounded-l-md');
+    expect(buttons[3]!.className).not.toContain('rounded-r-md');
   });
 
   it('uses white text for a future spanning event', () => {
@@ -258,6 +331,7 @@ describe('SpanningEventRows', () => {
         rowDates={[new Date(2099, 7, 10)]}
         events={[futureEvent]}
         onEventClick={() => {}}
+        gap="1px"
       />
     );
 
@@ -283,21 +357,24 @@ describe('SpanningEventRows', () => {
           rowDates={rowDates}
           events={[timedEvent]}
           onEventClick={() => {}}
+        gap="1px"
       />
         <SpanningEventRows
           date={continuationDay}
           rowDates={rowDates}
           events={[timedEvent]}
           onEventClick={() => {}}
+        gap="1px"
       />
       </div>
     );
 
     const buttons = container.querySelectorAll('button');
-    // The start time belongs to the day the event starts. The title still
-    // appears on the days after it; only the time is not repeated.
     expect(buttons[0]!.textContent).toBe('18:00 Weekend trip');
-    expect(buttons[1]!.textContent).toBe('Weekend trip');
+    // No title repeated, but not empty either: a slice with no content at all
+    // has no line box and collapses to its padding.
+    expect(buttons[1]!.textContent!.trim()).toBe('');
+    expect(buttons[1]!.textContent).not.toBe('');
     expect(buttons[1]!.title).toBe('Weekend trip');
   });
 });
