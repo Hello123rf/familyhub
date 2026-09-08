@@ -22,6 +22,7 @@ import { KrogerCartModal } from '@/app/shopping/KrogerCartModal';
 import { useShoppingViewData } from './useShoppingViewData';
 import { useShoppingCategories } from '@/lib/hooks/useShoppingCategories';
 import { useShoppingDragReorder } from './useShoppingDragReorder';
+import { useShoppingItemDragToCategory } from './useShoppingItemDragToCategory';
 import { useShoppingInlineInput, BASE_EMPTY_LINES } from './useShoppingInlineInput';
 import { useShoppingCelebration } from './useShoppingCelebration';
 import { useShoppingScanFlow } from './useShoppingScanFlow';
@@ -162,7 +163,7 @@ export function ShoppingView() {
 
   const {
     handleAddItem, handleNewList, handleEditItem, handleDeleteItem,
-    handleSaveNewItem, handleUpdateItem, handleSaveList, handleDeleteList,
+    handleSaveNewItem, handleUpdateItem, handleMoveItemCategory, handleSaveList, handleDeleteList,
   } = useShoppingCrudHandlers({
     requireAuth, refreshLists,
     setShowAddItemModal, setDefaultCategory, setEditingItem,
@@ -170,6 +171,12 @@ export function ShoppingView() {
     deleteItem, apiAddItem,
     activeList, editingItem, editingList, lists,
   });
+
+  const {
+    draggedItem, dragOverCategory,
+    handleItemDragStart, handleItemDragEnd,
+    handleItemDragOverCategory, handleItemDropOnCategory,
+  } = useShoppingItemDragToCategory({ onMoveItemToCategory: handleMoveItemCategory });
 
   return (
     <PageWrapper>
@@ -352,6 +359,12 @@ export function ShoppingView() {
                       onTouchStart={(e) => handleTouchStart(e, category)}
                       onTouchMove={handleTouchMove}
                       onTouchEnd={handleTouchEnd}
+                      draggedItemId={draggedItem?.id}
+                      isDragOverForItem={dragOverCategory === category}
+                      onItemDragStart={handleItemDragStart}
+                      onItemDragEnd={handleItemDragEnd}
+                      onItemDragOverCategory={(e) => handleItemDragOverCategory(e, category)}
+                      onItemDropOnCategory={(e) => handleItemDropOnCategory(e, category)}
                       onToggleItem={(itemId) => toggleItem(itemId)}
                       onEditItem={handleEditItem}
                       onDeleteItem={(itemId) => handleDeleteItem(itemId)}
