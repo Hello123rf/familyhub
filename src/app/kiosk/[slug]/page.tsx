@@ -10,23 +10,28 @@
  */
 
 import { db } from '@/lib/db/client';
-import { settings, chores, choreCompletions, users } from '@/lib/db/schema';
-import { eq, and, isNull, lte, or, isNull as drizzleIsNull } from 'drizzle-orm';
+import { settings, chores, choreCompletions, users, goals } from '@/lib/db/schema';
+import { eq, and, isNull, lte, or, isNotNull, asc } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
 import { format } from 'date-fns';
+import { computeWaterfall } from '@/lib/utils/pointWaterfall';
 
 const KIOSK_KEY_PREFIX = 'kiosk:';
 type KioskTokenValue = { userId: string; userName: string; userColor: string; createdAt: string };
 
-function categoryEmoji(category: string): string {
+// Plain text labels, not emoji: old e-ink Kindle browsers have no color-emoji
+// font, and this page is nested inside the root layout's own <html> (see
+// docs/kiosk notes), so it can't reliably rely on the root's emoji font
+// stylesheet loading before this content paints. Text renders everywhere.
+function categoryLabel(category: string): string {
   switch (category) {
-    case 'cleaning': return '🧹';
-    case 'laundry':  return '🧺';
-    case 'dishes':   return '🍽️';
-    case 'yard':     return '🌿';
-    case 'pets':     return '🐾';
-    case 'trash':    return '🗑️';
-    default:         return '✅';
+    case 'cleaning': return 'Cleaning';
+    case 'laundry':  return 'Laundry';
+    case 'dishes':   return 'Dishes';
+    case 'yard':     return 'Yard';
+    case 'pets':     return 'Pets';
+    case 'trash':    return 'Trash';
+    default:         return 'Chore';
   }
 }
 
@@ -107,6 +112,55 @@ export default async function KioskPage({ params }: PageProps) {
 
   const todayLabel = format(new Date(), 'EEEE, MMMM d');
 
+  // Progress toward the household's top-priority reward goal (e.g. ice cream).
+  // Same computation as the Goals page (src/app/api/goals/route.ts), scoped
+  // to just this child so the kiosk gives them a reason beyond the chore list.
+  const goalRows = await db
+    .select()
+    .from(goals)
+    .where(eq(goals.active, true))
+    .orderBy(asc(goals.priority));
+
+  let goalDisplay: { name: string; emoji: string | null; allocated: number; pointCost: number; achieved: boolean } | null = null;
+  const topGoal = goalRows[0];
+
+  if (topGoal) {
+    const approvedCompletions = await db
+      .select({
+        completedBy: choreCompletions.completedBy,
+        pointsAwarded: choreCompletions.pointsAwarded,
+        completedAt: choreCompletions.completedAt,
+      })
+      .from(choreCompletions)
+      .where(isNotNull(choreCompletions.approvedBy));
+
+    const childCompletions = approvedCompletions
+      .filter((c) => c.completedBy === userId)
+      .map((c) => ({ pointsAwarded: c.pointsAwarded, completedAt: c.completedAt }));
+
+    const goalDefs = goalRows.map((g) => ({
+      id: g.id,
+      pointCost: g.pointCost,
+      priority: g.priority,
+      recurring: g.recurring,
+      recurrencePeriod: g.recurrencePeriod,
+      lastResetAt: g.lastResetAt,
+    }));
+
+    const result = computeWaterfall(goalDefs, childCompletions);
+    const topProgress = result.goals.find((g) => g.goalId === topGoal.id);
+
+    if (topProgress) {
+      goalDisplay = {
+        name: topGoal.name,
+        emoji: topGoal.emoji,
+        allocated: topProgress.allocated,
+        pointCost: topGoal.pointCost,
+        achieved: topProgress.achieved,
+      };
+    }
+  }
+
   return (
     <html lang="en">
       <head>
@@ -123,13 +177,22 @@ export default async function KioskPage({ params }: PageProps) {
             line-height: 1.5;
           }
           .page { max-width: 600px; margin: 0 auto; padding: 24px 16px 48px; }
-          .header { border-bottom: 2px solid #000; padding-bottom: 16px; margin-bottom: 24px; }
+          .header { border-bottom: 2px solid #000; padding-bottom: 16px; margin-bottom: 16px; }
           .greeting { font-size: 1.1rem; color: #444; }
-          .name { font-size: 2rem; font-weight: bold; margin: 4px 0; }
+          .name-row { display: flex; align-items: center; gap: 10px; margin: 4px 0; }
+          .name-dot { width: 16px; height: 16px; border-radius: 50%; border: 2px solid #000; flex-shrink: 0; }
+          .name { font-size: 2rem; font-weight: bold; color: #000; }
           .date { font-size: 1rem; color: #555; }
+          .goal-banner {
+            border: 2px solid #000; border-radius: 6px;
+            padding: 12px 16px; margin-bottom: 20px;
+          }
+          .goal-banner-text { font-size: 1rem; font-weight: bold; margin-bottom: 6px; }
+          .goal-bar-wrap { height: 18px; background: #ddd; border-radius: 9px; }
+          .goal-bar-fill { height: 18px; background: #000; border-radius: 9px; }
           .progress { margin-bottom: 20px; font-size: 0.95rem; color: #333; }
-          .progress-bar-wrap { height: 10px; background: #ddd; border-radius: 5px; margin-top: 6px; }
-          .progress-bar-fill { height: 10px; background: #000; border-radius: 5px; }
+          .progress-bar-wrap { height: 18px; background: #ddd; border-radius: 9px; margin-top: 6px; }
+          .progress-bar-fill { height: 18px; background: #000; border-radius: 9px; }
           .section-label { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; color: #666; margin-bottom: 10px; }
           .chore-list { list-style: none; margin-bottom: 28px; }
           .chore-item {
@@ -140,7 +203,7 @@ export default async function KioskPage({ params }: PageProps) {
           }
           .chore-item.done-item { background: #f5f5f5; border-color: #bbb; }
           .chore-left { display: flex; align-items: center; gap: 14px; flex: 1; }
-          .chore-emoji { font-size: 1.6rem; flex-shrink: 0; }
+          .chore-category { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: #666; border: 1px solid #999; border-radius: 4px; padding: 2px 6px; flex-shrink: 0; }
           .chore-title { font-size: 1.25rem; font-weight: 600; }
           .chore-title.done-title { text-decoration: line-through; color: #777; }
           .chore-meta { font-size: 0.8rem; color: #888; margin-top: 2px; }
@@ -159,7 +222,6 @@ export default async function KioskPage({ params }: PageProps) {
             text-align: center; padding: 40px 20px;
             border: 3px solid #000; border-radius: 8px;
           }
-          .all-done-emoji { font-size: 4rem; display: block; margin-bottom: 12px; }
           .all-done-text { font-size: 1.6rem; font-weight: bold; }
           .all-done-sub { font-size: 1rem; color: #555; margin-top: 8px; }
           .nothing-today { text-align: center; padding: 40px 20px; color: #555; }
@@ -170,19 +232,36 @@ export default async function KioskPage({ params }: PageProps) {
         <div className="page">
           <header className="header">
             <div className="greeting">{greeting()},</div>
-            <div className="name" style={{ color: userColor }}>{userName}!</div>
+            <div className="name-row">
+              <span className="name-dot" style={{ background: userColor }} />
+              <span className="name">{userName}!</span>
+            </div>
             <div className="date">{todayLabel}</div>
           </header>
 
+          {goalDisplay && (
+            <div className="goal-banner">
+              <div className="goal-banner-text">
+                {goalDisplay.achieved
+                  ? `You reached ${goalDisplay.name}!`
+                  : `${goalDisplay.allocated} of ${goalDisplay.pointCost} points for ${goalDisplay.name} — ${Math.max(goalDisplay.pointCost - goalDisplay.allocated, 0)} more to go!`}
+              </div>
+              <div className="goal-bar-wrap">
+                <div
+                  className="goal-bar-fill"
+                  style={{ width: `${Math.min(100, Math.round((goalDisplay.allocated / goalDisplay.pointCost) * 100))}%` }}
+                />
+              </div>
+            </div>
+          )}
+
           {nothingToday ? (
             <div className="nothing-today">
-              <p style={{ fontSize: '2rem' }}>🎉</p>
-              <p style={{ fontSize: '1.2rem', marginTop: '12px' }}>No chores today!</p>
+              <p style={{ fontSize: '1.4rem', fontWeight: 'bold' }}>No chores today!</p>
               <p style={{ marginTop: '8px' }}>Have a great day.</p>
             </div>
           ) : allDone ? (
             <div className="all-done">
-              <span className="all-done-emoji">🌟</span>
               <div className="all-done-text">All done!</div>
               <div className="all-done-sub">
                 Amazing work, {userName}. All {dueChores.length} chore{dueChores.length !== 1 ? 's' : ''} are waiting for parent approval.
@@ -207,7 +286,7 @@ export default async function KioskPage({ params }: PageProps) {
                     {todo.map((chore) => (
                       <li key={chore.id} className="chore-item">
                         <div className="chore-left">
-                          <span className="chore-emoji">{categoryEmoji(chore.category)}</span>
+                          <span className="chore-category">{categoryLabel(chore.category)}</span>
                           <div>
                             <div className="chore-title">{chore.title}</div>
                             {chore.pointValue > 0 && (
@@ -233,12 +312,12 @@ export default async function KioskPage({ params }: PageProps) {
                     {done.map((chore) => (
                       <li key={chore.id} className="chore-item done-item">
                         <div className="chore-left">
-                          <span className="chore-emoji">{categoryEmoji(chore.category)}</span>
+                          <span className="chore-category">{categoryLabel(chore.category)}</span>
                           <div>
                             <div className="chore-title done-title">{chore.title}</div>
                           </div>
                         </div>
-                        <span className="done-badge">⏳ pending</span>
+                        <span className="done-badge">pending</span>
                       </li>
                     ))}
                   </ul>
@@ -247,7 +326,7 @@ export default async function KioskPage({ params }: PageProps) {
             </>
           )}
 
-          <p className="refresh-hint">Tap the browser's refresh button to update</p>
+          <p className="refresh-hint">To refresh: tap the top of the screen, then tap the circular arrow</p>
         </div>
       </body>
     </html>

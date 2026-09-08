@@ -53,7 +53,6 @@ export interface MobileNavProps {
 }
 
 // Primary items shown in bottom bar (most used for companion app)
-// Note: Chores and Goals removed from mobile - these are kiosk-focused features
 const primaryItems: NavItem[] = [
   { label: 'Shopping', i18nKey: 'nav.shopping', href: '/shopping', icon: ShoppingCart },
   { label: 'Tasks', i18nKey: 'nav.tasks', href: '/tasks', icon: CheckSquare },
@@ -61,8 +60,13 @@ const primaryItems: NavItem[] = [
   { label: 'Messages', i18nKey: 'nav.messages', href: '/messages', icon: MessageSquare },
 ];
 
-// Secondary items shown in "More" menu
+// Secondary items shown in "More" menu.
+// Chores/Goals live here (not in the primary bar) since the kiosk is the
+// day-to-day entry point for kids — but parents still need phone access to
+// approve completions and manage rewards, so they must not be nav-unreachable.
 const secondaryItems: NavItem[] = [
+  { label: 'Chores', i18nKey: 'nav.chores', href: '/chores', icon: ClipboardList },
+  { label: 'Goals', i18nKey: 'nav.goals', href: '/goals', icon: Trophy },
   { label: 'Recipes', i18nKey: 'nav.recipes', href: '/recipes', icon: ChefHat },
   { label: 'Settings', i18nKey: 'nav.settings', href: '/settings', icon: Settings },
 ];
