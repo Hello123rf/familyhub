@@ -245,197 +245,119 @@ export function SpanningEventRows({
     >
       {byLane.slice(startLane, lastActiveLane + 1).map((laneEvent, laneOffset) => {
         const lane = startLane + laneOffset;
-        // An empty lane below an occupied one: holds the lane open so the bar
-        // under it keeps the same height on every day it spans. It is an
-        // invisible copy of a bar rather than a fixed height, so it matches
-        // whatever height the theme's font and padding actually produce.
-        if (!laneEvent) {
-          return (
-            <div
-              key={`lane-${lane}`}
-              aria-hidden
-              // Same box as a real slice, borders included. In cards mode a
-              // slice carries a 1px border top and bottom; a placeholder
-              // without one is 2px shorter, so a bar sitting under a lane that
-              // is blank on one day and filled on the next rides up by 2px and
-              // the run looks broken. `invisible` hides it without changing
-              // what it occupies.
-              className={cn(barMetrics, cards && 'border', 'invisible')}
-            >
-              {/*
-                The same inner span a real slice has, carrying the same vertical
-                padding. The padding moved off the row and onto the text so the
-                colour stripe could reach the card's edges; a placeholder
-                without it came out 3.5px shorter, and every bar below it rode
-                up by that much.
-              */}
-              <span className={cn(cards && 'min-w-0 flex-1 truncate py-0.5')}>&nbsp;</span>
-            </div>
-          );
-        }
 
-        const event = laneEvent;
-        const continuesFromPrevious = occurs(event, addDays(date, -1));
-        const continuesToNext = occurs(event, addDays(date, 1));
+        // One shape for both a bar and a blank lane.
+        //
+        // A blank lane exists to hold a bar's vertical position steady across
+        // the days it spans, which only works if it occupies exactly the box a
+        // bar would. When it was a separate element restating a subset of the
+        // classes, it drifted five times — missing a line box, then a border,
+        // then the row's padding, then the card's type — and each drift moved
+        // every bar below it and made a run look broken.
+        //
+        // So a blank lane IS a slice, with no event: same element, same
+        // classes, `invisible` and holding a non-breaking space. There is
+        // nothing left to keep in step.
+        const filled = laneEvent !== null;
+        const continuesFromPrevious = filled && occurs(laneEvent, addDays(date, -1));
+        const continuesToNext = filled && occurs(laneEvent, addDays(date, 1));
         const continuesWithinRow = continuesToNext && column < rowDates.length - 1;
         // A run is joined by the LATER slice reaching back, not the earlier one
-        // reaching forward.
-        //
-        // Day cells are positioned siblings, so a later cell paints on top of
-        // an earlier one. A slice overflowing to the right disappeared behind
-        // the next cell's own background, leaving the grid gap and a cell's
-        // padding showing as a break — invisible against a pale background,
-        // obvious with grid lines on. Reaching backwards puts the overflow in
-        // the cell that paints last, so it covers the seam instead.
+        // reaching forward. Day cells are positioned siblings, so a later cell
+        // paints on top of an earlier one: overflowing to the right vanished
+        // behind the next cell's background and left the seam showing.
         const reachesBack = continuesFromPrevious && column > 0;
-        const roundLeft = !reachesBack;
-        const roundRight = !continuesWithinRow;
-        const past = isCalendarEventPast(
-          event.startTime,
-          event.endTime,
-          event.allDay,
-          new Date(),
-          displayTimezone
+        const past = filled && isCalendarEventPast(
+          laneEvent.startTime, laneEvent.endTime, laneEvent.allDay, new Date(), displayTimezone,
         );
+        const startsToday = filled && eventStartsOnDisplayDay(
+          laneEvent.startTime, laneEvent.allDay, date, displayTimezone,
+        );
+        const label = !filled
+          ? ''
+          : !laneEvent.allDay && startsToday
+            ? `${formatDisplayTime(laneEvent.startTime, timeFormat, {}, displayTimezone)} ${laneEvent.title}`
+            : laneEvent.title;
+        // The title prints where a run starts and again after a week wrap, not
+        // on every day it covers.
+        const showsLabel = filled && (!continuesFromPrevious || column === 0);
 
-        const startsToday = eventStartsOnDisplayDay(
-          event.startTime,
-          event.allDay,
-          date,
-          displayTimezone,
-        );
-        const label = !event.allDay && startsToday
-          ? `${formatDisplayTime(event.startTime, timeFormat, {}, displayTimezone)} ${event.title}`
-          : event.title;
+        const Tag = filled ? 'button' : 'div';
 
         return (
-          <button
-            key={event.id}
-            type="button"
-            title={label}
-            onClick={(clickEvent) => {
-              clickEvent.stopPropagation();
-              onEventClick(event);
-            }}
+          <Tag
+            key={filled ? laneEvent.id : `lane-${lane}`}
+            {...(filled
+              ? {
+                  type: 'button' as const,
+                  title: label,
+                  onClick: (clickEvent: React.MouseEvent) => {
+                    clickEvent.stopPropagation();
+                    onEventClick(laneEvent);
+                  },
+                }
+              : { 'aria-hidden': true })}
             className={cn(
               'relative z-20 block w-full truncate text-left font-medium leading-tight',
-              // Hover matches whatever the day's own events do in this mode.
               cards ? 'hover:bg-card transition-colors' : 'hover:brightness-95',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-seasonal-accent',
               barMetrics,
-              // One end treatment everywhere. An edge is rounded whenever it
-              // is actually visible: the only edges that are not are the ones
-              // a neighbouring slice bridges over inside the same week row.
-              // A bar that carries into the next row therefore ends in a cap
-              // like everything else, rather than a chevron.
-              //
-              // Radius comes from --radius, so a square-cornered theme squares
-              // these off along with every other chip.
-              roundLeft && 'rounded-l-md',
-              roundRight && 'rounded-r-md',
-              // Opaque, unlike the single-day cards beside it, which are 85%.
-              //
-              // A spanning pill is the one card that crosses a cell boundary,
-              // so whatever sits under the seam shows through it. The Today
-              // column's accent ring did exactly that: measured at the seam,
-              // the pill was the topmost element and the ring was still
-              // visible through it, drawing a coloured line across a join that
-              // is meant to be invisible.
+              // An edge is capped whenever it is actually visible; the only
+              // ones that are not are those a neighbouring slice covers. Radius
+              // comes from --radius, so a square theme squares these off too.
+              !reachesBack && 'rounded-l-md',
+              !continuesWithinRow && 'rounded-r-md',
+              // Opaque, unlike the 85% single-day cards: a spanning pill is the
+              // one card that crosses a cell boundary, so anything under the
+              // seam would show through it. The Today ring did exactly that.
               cards && 'bg-card border shadow-sm text-foreground',
-              // Mid-pill edges carry no border, so a run of days reads as one
-              // outlined object rather than a row of cards butted together.
+              // Mid-run edges carry no border, so a run reads as one object.
               cards && reachesBack && 'border-l-0',
               cards && continuesWithinRow && 'border-r-0',
-              past && 'opacity-55 saturate-[0.65]'
+              past && 'opacity-55 saturate-[0.65]',
+              !filled && 'invisible',
             )}
-            style={{
-              // In cards mode the colour moves to the leading edge, the way a
-              // single-day card carries it, so the two read as one family. The
-              // border is dropped on any edge a neighbouring slice bridges
-              // over, so a run of days stays one object rather than a row of
-              // separate cards.
-              backgroundColor: cards ? undefined : event.color,
-              color: cards ? undefined : past ? contrastText(event.color) : '#fff',
-              // Outlined in the event's own colour, all the way round, so a
-              // multi-day event is recognisable as one thing across the days it
-              // covers without relying on the cards touching.
-              // The 3px colour edge marks where the event STARTS, so a
-              // continuation must not draw one: an inline width beats the
-              // border-l-0 class, and it painted as a bar across the seam it
-              // was supposed to be hiding.
+            style={filled ? {
+              backgroundColor: cards ? undefined : laneEvent.color,
+              color: cards ? undefined : past ? contrastText(laneEvent.color) : '#fff',
               ...(cards
                 ? {
-                    // A washed version of the event colour round the perimeter,
-                    // and the solid band on the leading edge that every other
-                    // card in this view already uses.
-                    //
-                    // The full-strength outline did the border's job with the
-                    // colour's saturation, so an all-day event shouted where a
-                    // timed card murmured, and a cell full of them read as a
-                    // stack of frames rather than as text.
-                    //
-                    // BLENDED toward the card, not made translucent, for two
-                    // reasons. A see-through border would let whatever sits
-                    // under the seam show through, which is the bug that drew a
-                    // coloured line across every join. And blending toward
-                    // `--card` follows the theme: it lightens on a pale theme
-                    // and darkens in dark mode, with no second value to keep in
-                    // step. Where color-mix is unavailable the declaration is
-                    // dropped and the neutral `border` colour applies.
-                    borderColor: `color-mix(in srgb, ${event.color} 35%, hsl(var(--card)))`,
+                    // Washed toward --card rather than made translucent: a
+                    // see-through border would let the seam show through, and
+                    // blending against the token follows light and dark for
+                    // free.
+                    borderColor: `color-mix(in srgb, ${laneEvent.color} 35%, hsl(var(--card)))`,
                     ...(reachesBack ? { borderLeftWidth: 0 } : {}),
                     ...(continuesWithinRow ? { borderRightWidth: 0 } : {}),
                   }
                 : {}),
-              // Reaching back across this cell's left padding, the grid gap,
-              // and the previous cell's right padding.
               marginLeft: reachesBack ? `calc(-1 * ${SEAM_REACH})` : undefined,
               width: reachesBack ? `calc(100% + ${SEAM_REACH})` : '100%',
-            }}
+            } : undefined}
           >
-            {/*
-              A continuation slice carries no title: the label is printed on the
-              day the event starts and again after a week wrap, so it is not
-              repeated across every day it covers.
-
-              It still needs a line box. Without one its height collapses to the
-              padding alone, and since the height is now the theme's rather than
-              a fixed h-5, the bar became a ~4px sliver on every continuation
-              day — present, aligned, and invisible.
-            */}
-            {/*
-              The colour stripe as an element with the card's own gap after it,
-              rather than a fat left border.
-              
-              Matching by arithmetic — border plus stripe plus gap — meant
-              re-deriving the card's internals here and getting them wrong every
-              time one changed. Built the same way, the two line up because they
-              are the same construction, not because the numbers were copied
-              correctly.
-            */}
             {cards && (
               <span
                 aria-hidden
-                // Full height, no radius: the slice's own rounded corner and
-                // overflow clip it, so the curve on the stripe is the card's
-                // curve, at whatever height this row happens to be.
+                // Full height, no radius of its own: the slice's rounded corner
+                // and overflow mask it, so the curve is the card's curve at
+                // whatever height this row is.
                 className={cn(STRIPE_SHAPE)}
                 style={{
                   width: stripePx,
-                  backgroundColor: reachesBack ? 'transparent' : event.color,
+                  backgroundColor: filled && !reachesBack ? laneEvent.color : 'transparent',
                 }}
               />
             )}
             {/*
-              The row's vertical padding lives here, not on the button. On the
-              button it shrank the stripe's stretch target to the content box,
-              so the stripe stopped short of the card's edges and the corner had
+              The row's vertical padding lives here, not on the row. On the row
+              it shrank the stripe's stretch target to the content box, so the
+              stripe stopped short of the card's edges and the corner had
               nothing to mask.
             */}
             <span className={cn(cards && 'min-w-0 flex-1 truncate py-0.5', cards && titleClass)}>
-              {!continuesFromPrevious || column === 0 ? label : '\u00A0'}
+              {showsLabel ? label : '\u00A0'}
             </span>
-          </button>
+          </Tag>
         );
       })}
     </div>
