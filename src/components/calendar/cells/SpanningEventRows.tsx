@@ -270,18 +270,26 @@ export function SpanningEventRows({
           displayTimezone
         );
 
-        // How many days of this run are still to come after today.
+        // How many days this event covers in total.
         //
-        // The one thing a joined pill cannot say: standing on a bar you cannot
-        // tell whether it ends tonight or runs to the weekend. Counted by
-        // walking forward a day at a time rather than from end - start, so it
-        // agrees with whatever `occurs` treats as a covered day, including
-        // all-day events whose end is exclusive. Bounded so a malformed event
-        // cannot spin.
-        let daysAfterToday = 0;
+        // A property of the event, not of today: it reads the same on every day
+        // of the run and in every view. A countdown said something more useful
+        // on a given morning, but it made one event show different text
+        // depending on when you looked at it, which is corrosive on a display
+        // that is read at a glance.
+        //
+        // Counted by walking outward a day at a time rather than from
+        // end - start, so it agrees with whatever `occurs` treats as a covered
+        // day, including all-day events whose end is exclusive. Bounded so a
+        // malformed event cannot spin.
+        let totalDays = 1;
         for (let i = 1; i <= 366; i += 1) {
           if (!occurs(event, addDays(date, i))) break;
-          daysAfterToday += 1;
+          totalDays += 1;
+        }
+        for (let i = 1; i <= 366; i += 1) {
+          if (!occurs(event, addDays(date, -i))) break;
+          totalDays += 1;
         }
 
         const startsToday = eventStartsOnDisplayDay(
@@ -391,33 +399,24 @@ export function SpanningEventRows({
               a fixed h-5, the bar became a ~4px sliver on every continuation
               day — present, aligned, and invisible.
             */}
-            {!continuesFromPrevious || column === 0 ? label : '\u00A0'}
             {/*
-              A second line, only where it has something to say: on the day a
-              multi-day run starts, and again where it restarts after a week
-              wrap, which is where the title is. A single-day event gets no
-              second line — "All day" would spend a row on every birthday and
-              school closure to state what the absence of a time already does.
-
-              All-day events only. A timed event that runs past midnight — an
-              11pm game, a late flight — sits in this band because it touches
-              two days, but "1 more day" on it reads as though the game lasts
-              until tomorrow.
+              Duration above the title, matching the timed card's grammar where
+              the top line is when-or-how-long and the second line is what.
             */}
-            {cards && event.allDay && (daysAfterToday > 0 || continuesFromPrevious) && (
+            {cards && event.allDay && totalDays > 1 && (
               <span
                 className={cn(
                   'block truncate text-[9px] font-normal leading-tight text-muted-foreground',
-                  // Reserved, not printed, on the days that carry no title. The
-                  // run is one pill: if only the first slice were two lines
-                  // tall, the pill's bottom edge would step down at the day
-                  // boundary and stop reading as a single object.
+                  // Reserved, not printed, where the title is not printed. The
+                  // run is one pill: if only the first slice carried the extra
+                  // line, its edge would step at the day boundary.
                   continuesFromPrevious && column > 0 && 'invisible',
                 )}
               >
-                {daysAfterToday === 1 ? '1 more day' : `${daysAfterToday} more days`}
+                {`${totalDays} days`}
               </span>
             )}
+            {!continuesFromPrevious || column === 0 ? label : '\u00A0'}
           </button>
         );
       })}

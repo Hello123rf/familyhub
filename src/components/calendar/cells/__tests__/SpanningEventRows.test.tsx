@@ -3,7 +3,7 @@
  */
 
 import * as React from 'react';
-import { render } from '@testing-library/react';
+import { cleanup, render } from '@testing-library/react';
 import { SpanningEventRows } from '../SpanningEventRows';
 import { InlineCalendarEvent } from '../InlineCalendarEvent';
 import type { CalendarEvent } from '@/types/calendar';
@@ -263,7 +263,7 @@ describe('SpanningEventRows', () => {
     expect(bar.style.borderLeftWidth).toBe('3px');
   });
 
-  it('counts the run forward, and says nothing for a single-day event', () => {
+  it('states the whole run length, and says nothing for a single-day event', () => {
     const rowDates = Array.from({ length: 7 }, (_, i) => new Date(2026, 8, 27 + i));
     const oneDay: CalendarEvent = {
       ...event, id: 'one', title: 'Picture Day',
@@ -271,13 +271,17 @@ describe('SpanningEventRows', () => {
       endTime: new Date('2026-09-30T00:00:00.000Z'),
     };
     const render1 = (ev: CalendarEvent, index: number) => {
+      // Each case gets a clean DOM. Repeated renders in one test otherwise
+      // interfere, and the same call returns a different result depending on
+      // how many renders preceded it.
+      cleanup();
       const { container } = render(
         <SpanningEventRows date={rowDates[index]!} rowDates={rowDates} events={[ev]} onEventClick={() => {}} cards />,
       );
       return container.querySelector('button')!.textContent;
     };
 
-    // A single-day all-day event gets no second line: "All day" would spend a
+    // A single-day all-day event gets no duration line: "All day" would spend a
     // row to state what the absence of a time already says.
     expect(render1(oneDay, 2)).toBe('Picture Day');
 
@@ -286,8 +290,13 @@ describe('SpanningEventRows', () => {
       startTime: new Date('2026-09-28T00:00:00.000Z'),
       endTime: new Date('2026-10-01T00:00:00.000Z'),
     };
-    // Three covered days: counts the two still to come.
-    expect(render1(run, 1)).toBe('Away2 more days');
+    // Three covered days, stated as a property of the event rather than a
+    // countdown, so it reads the same on every day of the run and in any view.
+    expect(render1(run, 1)).toBe('3 daysAway');
+    // A continuation day carries the same duration — it is a property of the
+    // event, not of today — but not the title, which prints once per run.
+    expect(render1(run, 2)).toContain('3 days');
+    expect(render1(run, 2)).not.toContain('Away');
   });
 
   it('joins cards into one pill, labelled once, with no seam mid-run', () => {
@@ -313,10 +322,8 @@ describe('SpanningEventRows', () => {
       return container.querySelector('button')!;
     };
 
-    // Labelled where it starts, with the run count underneath it. The count is
-    // the one thing a joined pill cannot convey: standing on the bar you cannot
-    // see whether it ends tonight or runs on.
-    expect(onDay(1).textContent).toBe('Trip away2 more days');
+    // Labelled where it starts, with the run length above it.
+    expect(onDay(1).textContent).toBe('3 daysTrip away');
     expect(onDay(1).style.marginLeft).toBe('');
     // Continuation days join back over the seam and drop the left border, so
     // the run is one object rather than a line of separate cards.

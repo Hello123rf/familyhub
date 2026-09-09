@@ -381,7 +381,10 @@ function DayCell({
                   stripeColor={event.color}
                   title={event.title}
                   timeLabel={event.allDay ? t('allDay') : formatDisplayTime(event.startTime, timeFormat, {}, displayTimezone)}
-                  subtitle={event.location || event.calendarName}
+                  // Location only. The fallback to the calendar name spent a third row
+                  // on two thirds of events to repeat what the colour band already
+                  // says, and on one calendar it printed an account address.
+                  subtitle={event.location || undefined}
                   onClick={() => onEventClick(event)}
                   dragId={draggable ? `event:${event.id}` : undefined}
                   subdued={isCalendarEventPast(
