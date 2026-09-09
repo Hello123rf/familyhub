@@ -56,6 +56,16 @@ const PENDING_APPROVAL_OVERLAY = 'repeating-linear-gradient(45deg, rgba(168,85,2
  * 5px left stripe, and 1em title — we map those onto Tailwind tokens that
  * remain theme-aware.
  */
+/**
+ * How long the colour mark is, everywhere it appears.
+ *
+ * One value rather than one per card size, because the point of it is to be the
+ * same mark on every row of the grid. A stripe that stretched to its container
+ * made the same radius read as much rounder on a one-line row than a two-line
+ * one, so an identical spec looked like two different marks.
+ */
+export const STRIPE_LENGTH = 'h-3.5';
+
 const SIZE_STYLES: Record<WeekItemSize, {
   padding: string;
   titleText: string;
@@ -176,7 +186,7 @@ export function WeekItemCard({
         {pendingApproval && (
           <span aria-hidden className="absolute inset-0 pointer-events-none" style={{ background: PENDING_APPROVAL_OVERLAY }} />
         )}
-        <span aria-hidden className={cn('shrink-0 self-stretch rounded-full', styles.stripeWidth)} style={{ backgroundColor: stripeColor }} />
+        <span aria-hidden className={cn('shrink-0 self-center rounded-full', styles.stripeWidth, STRIPE_LENGTH)} style={{ backgroundColor: stripeColor }} />
         {styles.showTime && timeLabel && (
           <span className={cn('shrink-0 font-medium tabular-nums text-muted-foreground', styles.metaText)}>
             {timeLabel}
@@ -224,7 +234,17 @@ export function WeekItemCard({
       {pendingApproval && (
         <span aria-hidden className="absolute inset-0 pointer-events-none" style={{ background: PENDING_APPROVAL_OVERLAY }} />
       )}
-      <span aria-hidden className={cn('shrink-0 rounded-l-md', styles.stripeWidth)} style={{ backgroundColor: stripeColor }} />
+      {/*
+        A fixed-height mark, centred, rather than a stripe that stretches.
+        Stretching made its length follow the card's line count, and the same
+        radius then read as much rounder on a short stripe than a tall one — the
+        same shape spec looking like two different marks.
+      */}
+      <span
+        aria-hidden
+        className={cn('shrink-0 self-center rounded-full', styles.stripeWidth, STRIPE_LENGTH)}
+        style={{ backgroundColor: stripeColor }}
+      />
 
       <div className={cn('flex min-w-0 flex-1 flex-col', styles.padding)}>
         {styles.showTime && timeLabel && (
