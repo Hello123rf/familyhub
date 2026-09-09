@@ -114,6 +114,19 @@ const SIZE_STYLES: Record<WeekItemSize, {
   },
 };
 
+/**
+ * The type a card's title is set in, for anything that has to sit beside one.
+ *
+ * Exported so the all-day band can read it rather than restate it. Restating a
+ * card's metrics somewhere else is how the band ended up with different
+ * padding, a different stripe width and, here, lighter and smaller titles than
+ * the cards directly beneath them.
+ */
+export function cardTitleClasses(size: WeekItemSize): string {
+  const styles = SIZE_STYLES[size];
+  return `${styles.titleText} ${styles.titleWeight}`;
+}
+
 export function WeekItemCard({
   variant,
   stripeColor,

@@ -78,6 +78,14 @@ export type SpanningEventRowsProps = {
    */
   stripePx?: number;
   /**
+   * Type for the title, matching the cards in the same cell.
+   *
+   * The band set its own size and weight, so an all-day title came out lighter
+   * and smaller than the timed titles right below it. The caller passes what
+   * its own cards use.
+   */
+  titleClass?: string;
+  /**
    * How many of the blank lanes above this day's first bar the caller has
    * already filled with the day's own events.
    *
@@ -151,6 +159,7 @@ export function SpanningEventRows({
   cards = false,
   padX = 'px-1',
   stripePx = 3,
+  titleClass,
   omitLeadingBlanks = 0,
 }: SpanningEventRowsProps) {
   const { timeFormat, displayTimezone } = useTimeFormat();
@@ -216,7 +225,7 @@ export function SpanningEventRows({
   const barMetrics = compact
     ? 'px-0.5 py-px text-[8px]'
     : cards
-      ? 'flex items-stretch gap-2 pr-1 py-0.5 text-[10px]'
+      ? 'flex items-stretch gap-2 pr-1 text-[10px]'
       : 'px-[var(--event-padding-x,0.25rem)] py-[var(--event-padding-y,0.125rem)] text-[length:var(--event-font-size,0.75rem)] font-[var(--event-font-weight)]';
 
   return (
@@ -253,7 +262,14 @@ export function SpanningEventRows({
               // what it occupies.
               className={cn(barMetrics, cards && 'border', 'invisible')}
             >
-              &nbsp;
+              {/*
+                The same inner span a real slice has, carrying the same vertical
+                padding. The padding moved off the row and onto the text so the
+                colour stripe could reach the card's edges; a placeholder
+                without it came out 3.5px shorter, and every bar below it rode
+                up by that much.
+              */}
+              <span className={cn(cards && 'min-w-0 flex-1 truncate py-0.5')}>&nbsp;</span>
             </div>
           );
         }
@@ -410,7 +426,13 @@ export function SpanningEventRows({
                 }}
               />
             )}
-            <span className={cn(cards && 'min-w-0 flex-1 truncate')}>
+            {/*
+              The row's vertical padding lives here, not on the button. On the
+              button it shrank the stripe's stretch target to the content box,
+              so the stripe stopped short of the card's edges and the corner had
+              nothing to mask.
+            */}
+            <span className={cn(cards && 'min-w-0 flex-1 truncate py-0.5', cards && titleClass)}>
               {!continuesFromPrevious || column === 0 ? label : '\u00A0'}
             </span>
           </button>

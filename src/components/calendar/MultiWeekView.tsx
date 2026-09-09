@@ -15,7 +15,7 @@ import { hexToRgba } from '@/lib/utils/color';
 import { useWeekStartsOn } from '@/lib/hooks/useWeekStartsOn';
 import { seasonalPalettes } from '@/lib/themes/seasonalThemes';
 import type { CalendarEvent } from '@/types/calendar';
-import { CardHeightProbe, DayOverflowPopover, DroppableOverlayCell, InlineCalendarEvent, SpanningEventRows, WeekItemCard, useDayDroppable, weatherIcon, type OverlayItemRef } from './cells';
+import { CardHeightProbe, DayOverflowPopover, DroppableOverlayCell, InlineCalendarEvent, SpanningEventRows, WeekItemCard, cardTitleClasses, useDayDroppable, weatherIcon, type OverlayItemRef } from './cells';
 
 /** HSL color for the seasonal accent of the cell's month. */
 function getMonthAccentColor(date: Date): string {
@@ -355,6 +355,7 @@ function DayCell({
         padX={compact ? 'px-1' : 'px-1.5'}
         // Matches the stripe on this view's cards: sm is 3px, md is 5px.
         stripePx={compact ? 3 : 5}
+        titleClass={cardTitleClasses(cardSize)}
       />
 
       {/* Cards / events. In cards mode, meals render at the top of the day's

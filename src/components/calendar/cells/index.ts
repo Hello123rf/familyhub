@@ -1,4 +1,4 @@
-export { WeekItemCard, STRIPE_SHAPE } from './WeekItemCard';
+export { WeekItemCard, STRIPE_SHAPE, cardTitleClasses } from './WeekItemCard';
 export type { WeekItemVariant, WeekItemSize, WeekItemLayout } from './WeekItemCard';
 export { DayColumn } from './DayColumn';
 export type { OverlayFlags } from './DayColumn';

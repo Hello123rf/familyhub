@@ -8,6 +8,16 @@ interface CardHeightProbeProps {
   size: WeekItemSize;
   /** Layout to probe — must match what real cells render. Defaults to 'column'. */
   layout?: WeekItemLayout;
+  /**
+   * Whether the probe should include a subtitle row.
+   *
+   * It must match what the caller actually renders. The probe measured a card
+   * WITH a subtitle while the two-week view had stopped rendering one, so every
+   * event was costed at a three-line card. Capacity then believed far fewer
+   * fitted than did, and a day showed "+2 more" with 166px of empty space under
+   * it.
+   */
+  withSubtitle?: boolean;
   /** Receives the measured height in px each time it changes. */
   onMeasure: (height: number | undefined) => void;
 }
@@ -21,7 +31,7 @@ interface CardHeightProbeProps {
  * The probe is `aria-hidden`, fixed-position and visually invisible, but is
  * still in the layout tree so its CSS reflects what real cards will render.
  */
-export function CardHeightProbe({ size, layout = 'column', onMeasure }: CardHeightProbeProps) {
+export function CardHeightProbe({ size, layout = 'column', withSubtitle = false, onMeasure }: CardHeightProbeProps) {
   const { ref, height } = useMeasuredHeight();
 
   React.useEffect(() => {
@@ -48,7 +58,7 @@ export function CardHeightProbe({ size, layout = 'column', onMeasure }: CardHeig
         stripeColor="#3B82F6"
         title="Probe Card Title"
         timeLabel="9:00 AM"
-        subtitle="probe"
+        subtitle={withSubtitle ? 'probe' : undefined}
       />
     </div>
   );
