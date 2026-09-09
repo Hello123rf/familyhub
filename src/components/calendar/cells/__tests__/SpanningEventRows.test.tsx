@@ -239,7 +239,7 @@ describe('SpanningEventRows', () => {
     }
   });
 
-  it('wears the card surface in cards mode, with the colour on the leading edge', () => {
+  it('wears the card surface in cards mode, with the colour on a stripe', () => {
     const rowDates = [new Date(2026, 7, 10), new Date(2026, 7, 11)];
 
     const { container } = render(
@@ -258,45 +258,42 @@ describe('SpanningEventRows', () => {
     expect(bar.className).toContain('bg-card');
     expect(bar.className).not.toContain('bg-card/85');
     expect(bar.className).toContain('shadow-sm');
-    // The event colour moves to the leading edge instead of filling the bar.
+    // The event colour moves to a stripe element built the same way the card's
+    // is, rather than a fat left border, so the two line up by construction.
     expect(bar.style.backgroundColor).toBe('');
-    expect(bar.style.borderLeftWidth).toBe('3px');
+    const stripe = bar.querySelector('span[aria-hidden]') as HTMLElement | null;
+    expect(stripe).not.toBeNull();
+    expect(stripe!.style.width).toBe('3px');
   });
 
-  it('states the whole run length, and says nothing for a single-day event', () => {
+  it('gives every band slice the same one-line box, whatever the event', () => {
+    // Lanes only line up across days if every slice in the band is the same
+    // height. A second line on some slices and not others made lane 1 start at
+    // 155 in one column and 166 in the next, so a pill in a lower lane stepped
+    // between days. Title only, so every slice is one line.
     const rowDates = Array.from({ length: 7 }, (_, i) => new Date(2026, 8, 27 + i));
     const oneDay: CalendarEvent = {
       ...event, id: 'one', title: 'Picture Day',
       startTime: new Date('2026-09-29T00:00:00.000Z'),
       endTime: new Date('2026-09-30T00:00:00.000Z'),
     };
-    const render1 = (ev: CalendarEvent, index: number) => {
-      // Each case gets a clean DOM. Repeated renders in one test otherwise
-      // interfere, and the same call returns a different result depending on
-      // how many renders preceded it.
-      cleanup();
-      const { container } = render(
-        <SpanningEventRows date={rowDates[index]!} rowDates={rowDates} events={[ev]} onEventClick={() => {}} cards />,
-      );
-      return container.querySelector('button')!.textContent;
-    };
-
-    // A single-day all-day event gets no duration line: "All day" would spend a
-    // row to state what the absence of a time already says.
-    expect(render1(oneDay, 2)).toBe('Picture Day');
-
     const run: CalendarEvent = {
       ...event, id: 'run', title: 'Away',
       startTime: new Date('2026-09-28T00:00:00.000Z'),
       endTime: new Date('2026-10-01T00:00:00.000Z'),
     };
-    // Three covered days, stated as a property of the event rather than a
-    // countdown, so it reads the same on every day of the run and in any view.
-    expect(render1(run, 1)).toBe('3 daysAway');
-    // A continuation day carries the same duration — it is a property of the
-    // event, not of today — but not the title, which prints once per run.
-    expect(render1(run, 2)).toContain('3 days');
-    expect(render1(run, 2)).not.toContain('Away');
+    const render1 = (ev: CalendarEvent, index: number) => {
+      cleanup();
+      const { container } = render(
+        <SpanningEventRows date={rowDates[index]!} rowDates={rowDates} events={[ev]} onEventClick={() => {}} cards />,
+      );
+      return container.querySelector('button')!;
+    };
+
+    expect(render1(oneDay, 2).textContent).toBe('Picture Day');
+    expect(render1(run, 1).textContent).toBe('Away');
+    // A continuation still holds its line box, so the run keeps one height.
+    expect(render1(run, 2).textContent!.trim()).toBe('');
   });
 
   it('joins cards into one pill, labelled once, with no seam mid-run', () => {
@@ -322,8 +319,8 @@ describe('SpanningEventRows', () => {
       return container.querySelector('button')!;
     };
 
-    // Labelled where it starts, with the run length above it.
-    expect(onDay(1).textContent).toBe('3 daysTrip away');
+    // Labelled where it starts, one line, like every other slice in the band.
+    expect(onDay(1).textContent).toBe('Trip away');
     expect(onDay(1).style.marginLeft).toBe('');
     // Continuation days join back over the seam and drop the left border, so
     // the run is one object rather than a line of separate cards.

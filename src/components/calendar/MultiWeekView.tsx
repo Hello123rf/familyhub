@@ -353,6 +353,8 @@ function DayCell({
         cards={cards}
         // Matches this view's event list below (line ~364).
         padX={compact ? 'px-1' : 'px-1.5'}
+        // Matches the stripe on this view's cards: sm is 3px, md is 5px.
+        stripePx={compact ? 3 : 5}
       />
 
       {/* Cards / events. In cards mode, meals render at the top of the day's
@@ -381,10 +383,11 @@ function DayCell({
                   stripeColor={event.color}
                   title={event.title}
                   timeLabel={event.allDay ? t('allDay') : formatDisplayTime(event.startTime, timeFormat, {}, displayTimezone)}
-                  // Location only. The fallback to the calendar name spent a third row
-                  // on two thirds of events to repeat what the colour band already
-                  // says, and on one calendar it printed an account address.
-                  subtitle={event.location || undefined}
+                  // No third row at all. A location is worth knowing, but not at
+                  // the cost of a card that is three lines in one cell and two
+                  // in the next; the modal has it, and the grid is read from
+                  // across a room. Time and title only.
+                  subtitle={undefined}
                   onClick={() => onEventClick(event)}
                   dragId={draggable ? `event:${event.id}` : undefined}
                   subdued={isCalendarEventPast(

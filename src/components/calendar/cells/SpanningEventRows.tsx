@@ -67,6 +67,16 @@ export type SpanningEventRowsProps = {
    */
   padX?: string;
   /**
+   * Width of the colour edge, in px, matching the stripe on the cards below.
+   *
+   * A card's stripe width comes from its size — 3px at `sm`, 5px at `md` — and
+   * the band hardcoded 3px. Where the caller uses `md` the two differed, so the
+   * title in the band started two pixels left of the titles beneath it. Small,
+   * and exactly the kind of thing that reads as "not aligned" without being
+   * obvious why.
+   */
+  stripePx?: number;
+  /**
    * How many of the blank lanes above this day's first bar the caller has
    * already filled with the day's own events.
    *
@@ -139,6 +149,7 @@ export function SpanningEventRows({
   compact = false,
   cards = false,
   padX = 'px-1',
+  stripePx = 3,
   omitLeadingBlanks = 0,
 }: SpanningEventRowsProps) {
   const { timeFormat, displayTimezone } = useTimeFormat();
@@ -204,7 +215,7 @@ export function SpanningEventRows({
   const barMetrics = compact
     ? 'px-0.5 py-px text-[8px]'
     : cards
-      ? 'px-1 py-0.5 text-[10px]'
+      ? 'flex items-stretch gap-2 pr-1 py-0.5 text-[10px]'
       : 'px-[var(--event-padding-x,0.25rem)] py-[var(--event-padding-y,0.125rem)] text-[length:var(--event-font-size,0.75rem)] font-[var(--event-font-weight)]';
 
   return (
@@ -269,28 +280,6 @@ export function SpanningEventRows({
           new Date(),
           displayTimezone
         );
-
-        // How many days this event covers in total.
-        //
-        // A property of the event, not of today: it reads the same on every day
-        // of the run and in every view. A countdown said something more useful
-        // on a given morning, but it made one event show different text
-        // depending on when you looked at it, which is corrosive on a display
-        // that is read at a glance.
-        //
-        // Counted by walking outward a day at a time rather than from
-        // end - start, so it agrees with whatever `occurs` treats as a covered
-        // day, including all-day events whose end is exclusive. Bounded so a
-        // malformed event cannot spin.
-        let totalDays = 1;
-        for (let i = 1; i <= 366; i += 1) {
-          if (!occurs(event, addDays(date, i))) break;
-          totalDays += 1;
-        }
-        for (let i = 1; i <= 366; i += 1) {
-          if (!occurs(event, addDays(date, -i))) break;
-          totalDays += 1;
-        }
 
         const startsToday = eventStartsOnDisplayDay(
           event.startTime,
@@ -377,9 +366,7 @@ export function SpanningEventRows({
                     // step. Where color-mix is unavailable the declaration is
                     // dropped and the neutral `border` colour applies.
                     borderColor: `color-mix(in srgb, ${event.color} 35%, hsl(var(--card)))`,
-                    ...(reachesBack
-                      ? { borderLeftWidth: 0 }
-                      : { borderLeftWidth: 3, borderLeftColor: event.color }),
+                    ...(reachesBack ? { borderLeftWidth: 0 } : {}),
                     ...(continuesWithinRow ? { borderRightWidth: 0 } : {}),
                   }
                 : {}),
@@ -400,23 +387,28 @@ export function SpanningEventRows({
               day — present, aligned, and invisible.
             */}
             {/*
-              Duration above the title, matching the timed card's grammar where
-              the top line is when-or-how-long and the second line is what.
+              The colour stripe as an element with the card's own gap after it,
+              rather than a fat left border.
+              
+              Matching by arithmetic — border plus stripe plus gap — meant
+              re-deriving the card's internals here and getting them wrong every
+              time one changed. Built the same way, the two line up because they
+              are the same construction, not because the numbers were copied
+              correctly.
             */}
-            {cards && event.allDay && totalDays > 1 && (
+            {cards && (
               <span
-                className={cn(
-                  'block truncate text-[9px] font-normal leading-tight text-muted-foreground',
-                  // Reserved, not printed, where the title is not printed. The
-                  // run is one pill: if only the first slice carried the extra
-                  // line, its edge would step at the day boundary.
-                  continuesFromPrevious && column > 0 && 'invisible',
-                )}
-              >
-                {`${totalDays} days`}
-              </span>
+                aria-hidden
+                className="shrink-0 rounded-full"
+                style={{
+                  width: stripePx,
+                  backgroundColor: reachesBack ? 'transparent' : event.color,
+                }}
+              />
             )}
-            {!continuesFromPrevious || column === 0 ? label : '\u00A0'}
+            <span className={cn(cards && 'min-w-0 flex-1 truncate')}>
+              {!continuesFromPrevious || column === 0 ? label : '\u00A0'}
+            </span>
           </button>
         );
       })}
