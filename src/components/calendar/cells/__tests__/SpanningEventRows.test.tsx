@@ -263,6 +263,33 @@ describe('SpanningEventRows', () => {
     expect(bar.style.borderLeftWidth).toBe('3px');
   });
 
+  it('counts the run forward, and says nothing for a single-day event', () => {
+    const rowDates = Array.from({ length: 7 }, (_, i) => new Date(2026, 8, 27 + i));
+    const oneDay: CalendarEvent = {
+      ...event, id: 'one', title: 'Picture Day',
+      startTime: new Date('2026-09-29T00:00:00.000Z'),
+      endTime: new Date('2026-09-30T00:00:00.000Z'),
+    };
+    const render1 = (ev: CalendarEvent, index: number) => {
+      const { container } = render(
+        <SpanningEventRows date={rowDates[index]!} rowDates={rowDates} events={[ev]} onEventClick={() => {}} cards />,
+      );
+      return container.querySelector('button')!.textContent;
+    };
+
+    // A single-day all-day event gets no second line: "All day" would spend a
+    // row to state what the absence of a time already says.
+    expect(render1(oneDay, 2)).toBe('Picture Day');
+
+    const run: CalendarEvent = {
+      ...event, id: 'run', title: 'Away',
+      startTime: new Date('2026-09-28T00:00:00.000Z'),
+      endTime: new Date('2026-10-01T00:00:00.000Z'),
+    };
+    // Three covered days: counts the two still to come.
+    expect(render1(run, 1)).toBe('Away2 more days');
+  });
+
   it('joins cards into one pill, labelled once, with no seam mid-run', () => {
     // Cards join the same way bars do: the run is one outlined pill carrying a
     // single label, with no border drawn on the edges a neighbouring slice
@@ -286,8 +313,10 @@ describe('SpanningEventRows', () => {
       return container.querySelector('button')!;
     };
 
-    // Labelled where it starts.
-    expect(onDay(1).textContent).toBe('Trip away');
+    // Labelled where it starts, with the run count underneath it. The count is
+    // the one thing a joined pill cannot convey: standing on the bar you cannot
+    // see whether it ends tonight or runs on.
+    expect(onDay(1).textContent).toBe('Trip away2 more days');
     expect(onDay(1).style.marginLeft).toBe('');
     // Continuation days join back over the seam and drop the left border, so
     // the run is one object rather than a line of separate cards.
