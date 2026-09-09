@@ -146,6 +146,12 @@ export function useCalendarViewData() {
       endTime: event.endTime,
       allDay: event.allDay,
       color: event.color,
+      // Carried, not dropped. This map rebuilds each event field by field, and
+      // description was missing from the list while location was present — so a
+      // synced event arrived at the edit modal with empty notes and no clue
+      // why. Everything upstream had it: Google, the row, the API and
+      // useCalendarEvents all carry description; it died here.
+      description: event.description,
       location: event.location,
       recurring: event.recurring,
       recurrenceRule: event.recurrenceRule,

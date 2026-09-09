@@ -57,14 +57,15 @@ const PENDING_APPROVAL_OVERLAY = 'repeating-linear-gradient(45deg, rgba(168,85,2
  * remain theme-aware.
  */
 /**
- * How long the colour mark is, everywhere it appears.
+ * The colour stripe carries NO radius of its own.
  *
- * One value rather than one per card size, because the point of it is to be the
- * same mark on every row of the grid. A stripe that stretched to its container
- * made the same radius read as much rounder on a one-line row than a two-line
- * one, so an identical spec looked like two different marks.
+ * It runs the full height and the card's `overflow-hidden` plus its own
+ * `rounded-md` mask it, so the curve you see on the stripe is literally the
+ * card's corner. Giving the stripe its own radius meant the same value read as
+ * much rounder on a short row than a tall one; letting the card do the masking
+ * makes it correct at every height by construction.
  */
-export const STRIPE_LENGTH = 'h-3.5';
+export const STRIPE_SHAPE = 'shrink-0 self-stretch';
 
 const SIZE_STYLES: Record<WeekItemSize, {
   padding: string;
@@ -186,7 +187,7 @@ export function WeekItemCard({
         {pendingApproval && (
           <span aria-hidden className="absolute inset-0 pointer-events-none" style={{ background: PENDING_APPROVAL_OVERLAY }} />
         )}
-        <span aria-hidden className={cn('shrink-0 self-center rounded-full', styles.stripeWidth, STRIPE_LENGTH)} style={{ backgroundColor: stripeColor }} />
+        <span aria-hidden className={cn(STRIPE_SHAPE, styles.stripeWidth)} style={{ backgroundColor: stripeColor }} />
         {styles.showTime && timeLabel && (
           <span className={cn('shrink-0 font-medium tabular-nums text-muted-foreground', styles.metaText)}>
             {timeLabel}
@@ -234,17 +235,7 @@ export function WeekItemCard({
       {pendingApproval && (
         <span aria-hidden className="absolute inset-0 pointer-events-none" style={{ background: PENDING_APPROVAL_OVERLAY }} />
       )}
-      {/*
-        A fixed-height mark, centred, rather than a stripe that stretches.
-        Stretching made its length follow the card's line count, and the same
-        radius then read as much rounder on a short stripe than a tall one — the
-        same shape spec looking like two different marks.
-      */}
-      <span
-        aria-hidden
-        className={cn('shrink-0 self-center rounded-full', styles.stripeWidth, STRIPE_LENGTH)}
-        style={{ backgroundColor: stripeColor }}
-      />
+      <span aria-hidden className={cn(STRIPE_SHAPE, styles.stripeWidth)} style={{ backgroundColor: stripeColor }} />
 
       <div className={cn('flex min-w-0 flex-1 flex-col', styles.padding)}>
         {styles.showTime && timeLabel && (

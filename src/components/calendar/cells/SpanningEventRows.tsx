@@ -11,7 +11,7 @@ import {
   formatDisplayTime,
   isCalendarEventPast,
 } from '@/lib/utils/timeFormat';
-import { STRIPE_LENGTH } from './WeekItemCard';
+import { STRIPE_SHAPE } from './WeekItemCard';
 
 /**
  * How far a continuation slice reaches back over the seam between two cells.
@@ -400,10 +400,10 @@ export function SpanningEventRows({
             {cards && (
               <span
                 aria-hidden
-                // The same mark the cards carry: one length, centred, so an
-                // all-day row and a timed row show the same thing rather than
-                // the same radius at two different proportions.
-                className={cn('shrink-0 self-center rounded-full', STRIPE_LENGTH)}
+                // Full height, no radius: the slice's own rounded corner and
+                // overflow clip it, so the curve on the stripe is the card's
+                // curve, at whatever height this row happens to be.
+                className={cn(STRIPE_SHAPE)}
                 style={{
                   width: stripePx,
                   backgroundColor: reachesBack ? 'transparent' : event.color,
