@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { getSeededParentId } from './helpers/auth';
 
 /**
  * Geometry checks for the calendar grid.
@@ -10,7 +11,23 @@ import { test, expect, type Page } from '@playwright/test';
  * rendered boxes were not. These assert the boxes.
  */
 
+/**
+ * CI runs against a freshly seeded database with no display user configured, so
+ * an anonymous /calendar renders an empty grid and there is nothing to measure.
+ * A dev instance already has one, and its real PIN is not 1234, so the login
+ * sits behind the same flag every database-dependent spec uses. Guessing PINs
+ * against a live deployment trips the lockout.
+ */
+const HAS_TEST_DB = process.env.E2E_HAS_TEST_DB === '1';
+const PIN = process.env.E2E_PIN || '1234';
+
 async function openCalendar(page: Page, mode: 'cards' | 'inline', view = 'multiWeek') {
+  if (HAS_TEST_DB) {
+    const login = await page.request.post('/api/auth/login', {
+      data: { userId: getSeededParentId(), pin: PIN },
+    });
+    expect(login.ok(), 'precondition: login must succeed before measuring').toBe(true);
+  }
   await page.addInitScript(([m, v]) => {
     localStorage.setItem('prism-calendar-view-type', v as string);
     localStorage.setItem('prism-calendar-week-count', '2');

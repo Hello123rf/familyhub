@@ -1,4 +1,5 @@
 import { Page, expect } from '@playwright/test';
+import { execSync } from 'node:child_process';
 
 export interface FamilyMember {
   id: string;
@@ -112,4 +113,27 @@ export async function loginViaAPI(page: Page, name: string, pin = DEFAULT_PIN) {
  */
 export async function logout(page: Page) {
   await page.request.post('/api/auth/logout');
+}
+
+/**
+ * Query the seeded parent's id straight from the DB.
+ *
+ * `getFamilyMembers` reads /api/family, which redacts ids for unauthenticated
+ * callers, so a spec that has no session yet cannot find a parent through the
+ * API. Two execution paths, because dev and CI hold the database differently:
+ *
+ *   - Local (Windows dev): postgres is in the `prism-db` container and `psql`
+ *     may not exist on the host, so reach in with `docker exec`.
+ *   - CI: postgres is a service container and the runner has `psql`, so use
+ *     DATABASE_URL.
+ *
+ * Only call this behind `E2E_HAS_TEST_DB=1`. It assumes a seeded database.
+ */
+export function getSeededParentId(): string {
+  const cmd = process.env.DATABASE_URL
+    ? `psql "${process.env.DATABASE_URL}" -At -c "SELECT id FROM users WHERE role = 'parent' ORDER BY created_at LIMIT 1"`
+    : `docker exec prism-db psql -U prism -d prism -At -c "SELECT id FROM users WHERE role = 'parent' ORDER BY created_at LIMIT 1"`;
+  const out = execSync(cmd, { encoding: 'utf-8' }).trim();
+  if (!out) throw new Error('No seeded parent in DB: did seeds run?');
+  return out;
 }
