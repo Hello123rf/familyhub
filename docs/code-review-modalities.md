@@ -24,7 +24,7 @@ Real Prism bugs in this class that survived adversarial review and were caught b
 | Toolbar icons invisible under wallpaper z-index in perf mode | Render |
 | `/api/family` POST blocked initial setup wizard | User-flow |
 | Auto-hide UI making toolbar appear "broken" | User-flow |
-| Real first names in `formatters.test.ts` fixtures | Cross-artifact (PII) |
+| A test fixture that read as fictional but wasn't | Cross-artifact (PII) |
 | `scan-pii.sh` couldn't find the denylist when run via npm-spawned bash on WSL | Cross-environment (path resolution) |
 | `scan-pii.sh` ran 30+ seconds on a 50-entry denylist (per-entry loop instead of single-pass `grep -f`) | Performance / algorithmic |
 
@@ -73,7 +73,7 @@ Boots a fresh DB container, applies all migrations, applies them a second time, 
 
 ### PII denylist scan — `scripts/scan-pii.sh`
 
-Whole-word, fixed-string grep that fails if any tracked file contains items from a maintainer-curated personal denylist. Catches the leak class that surfaced in `formatters.test.ts` (a fictional-looking test fixture that actually used real first names from the maintainer's family). This is a local / pre-push tool, not a CI gate — the denylist lives outside the repo and is per-maintainer.
+Whole-word, fixed-string grep that fails if any tracked file contains items from a maintainer-curated personal denylist. Catches the leak class where a test fixture reads as fictional but isn't: a reviewer has no way to tell an invented name from one that belongs to someone. This is a local / pre-push tool, not a CI gate — the denylist lives outside the repo and is per-maintainer.
 
 **Setup (one-time):**
 
