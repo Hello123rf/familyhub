@@ -29,6 +29,16 @@ const withPWA = require('next-pwa')({
   // fetched on demand the way the stylesheet already intended. Scoped to the
   // emoji font by name so ordinary text fonts keep their precache.
   buildExcludes: [/noto-color-emoji.*\.woff2$/],
+  // Same reasoning for MapLibre's worker chunks (public/maplibre, written by
+  // scripts/copy-maplibre-worker.mjs). They are ~500 kB and are only ever
+  // fetched by the travel globe; precaching them would download the pair onto
+  // every display on service-worker install, including ones that never open
+  // Travel. MapLibre requests the worker itself when a map is created.
+  //
+  // These live in public/, which next-pwa globs separately from the webpack
+  // build, so they need publicExcludes rather than buildExcludes. The default
+  // value is ['!noprecache/**/*'] and is repeated here so it is not dropped.
+  publicExcludes: ['!noprecache/**/*', '!maplibre/**/*'],
 });
 
 /** @type {import('next').NextConfig} */

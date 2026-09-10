@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
-import type maplibregl from 'maplibre-gl';
+import type * as maplibregl from 'maplibre-gl';
 
 export function useGlobeRotation(
   mapRef: React.MutableRefObject<maplibregl.Map | null>,

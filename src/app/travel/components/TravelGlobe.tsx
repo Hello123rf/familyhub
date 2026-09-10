@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import maplibregl from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { TravelPin, TravelTrip } from '../types';
 import { STATUS_CONFIG, NPS_COLOR } from '../types';
@@ -11,6 +11,17 @@ import { addTripLinesLayer, buildTripFeatures, buildTripContextMap } from './glo
 import { useGlobeRotation } from './useGlobeRotation';
 
 const STYLE_LIGHT = 'https://tiles.openfreemap.org/styles/liberty';
+
+// maplibre-gl v6 is ESM-only and finds its worker via
+// `new URL('./maplibre-gl-worker.mjs', import.meta.url)`. Webpack does not
+// preserve import.meta.url, so in a Next build that resolves to '' and the
+// worker is constructed against the page itself and dies immediately. Nothing
+// throws: the map still draws its raster sources, so the globe comes up with
+// land shading but no water, boundaries or labels.
+//
+// scripts/copy-maplibre-worker.mjs puts the worker (and the shared chunk it
+// imports) under public/maplibre at build time; this points MapLibre at it.
+maplibregl.config.WORKER_URL = '/maplibre/maplibre-gl-worker.mjs';
 
 interface TravelGlobeProps {
   pins: TravelPin[];
@@ -61,8 +72,7 @@ export function TravelGlobe({
     map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
 
     map.on('style.load', () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (map as any).setProjection({ type: 'globe' });
+      map.setProjection({ type: 'globe' });
       addTripLinesLayer(map);
       if (!overlayOpenRef.current) startRotation();
     });

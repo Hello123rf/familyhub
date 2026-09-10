@@ -1,4 +1,4 @@
-import maplibregl from 'maplibre-gl';
+import type * as maplibregl from 'maplibre-gl';
 import type { TravelPin, TravelTrip } from '../types';
 import { STATUS_CONFIG } from '../types';
 import type { TripMarkerContext } from './globeMarkers';
