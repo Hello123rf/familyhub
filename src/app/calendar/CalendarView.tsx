@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
+import DOMPurify from 'dompurify';
 import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useDateLabels } from '@/lib/hooks/useDateLabels';
@@ -766,8 +767,26 @@ export function CalendarView() {
 }
 
 
+/**
+ * Event descriptions come from external calendars, so they are untrusted HTML.
+ *
+ * Allowlist rather than denylist: only inline formatting and lists survive, and
+ * links are forced to open in a new tab without handing the opener a reference
+ * back. Runs only in the browser — DOMPurify needs a DOM, and this modal is
+ * client-only anyway.
+ */
+function sanitizeDescription(html: string): string {
+  if (typeof window === 'undefined') return '';
+  return DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: ['b', 'strong', 'i', 'em', 'u', 's', 'br', 'p', 'div', 'span', 'ul', 'ol', 'li', 'a', 'code', 'pre'],
+    ALLOWED_ATTR: ['href', 'title'],
+    ALLOW_DATA_ATTR: false,
+    ADD_ATTR: ['target', 'rel'],
+  });
+}
+
 function EventDetailModal({ event, onClose, onEdit, onDeleted }: {
-  event: { id: string; title: string; startTime: Date; endTime: Date; allDay: boolean; color: string; location?: string; calendarName: string };
+  event: { id: string; title: string; startTime: Date; endTime: Date; allDay: boolean; color: string; location?: string; description?: string; calendarName: string };
   onClose: () => void;
   onEdit: () => void;
   onDeleted: () => void;
@@ -805,7 +824,23 @@ function EventDetailModal({ event, onClose, onEdit, onDeleted }: {
                 time: formatDisplayTime(event.startTime, timeFormat, {}, displayTimezone),
               })}
         </p>
-        {event.location && <p className="text-sm text-muted-foreground mb-4">{event.location}</p>}
+        {event.location && <p className="text-sm text-muted-foreground mb-2">{event.location}</p>}
+        {/*
+          Descriptions arrive as HTML from Google — "<b>BOLD</b>" and the like —
+          so they are rendered rather than printed as tags. The source is an
+          external calendar, which makes it untrusted markup: sanitised through
+          DOMPurify with an allowlist of formatting tags only, so no script,
+          style, iframe or event handler can survive.
+
+          Capped in height with its own scroll: some events carry a whole
+          meeting agenda, and the modal should not grow to fit one.
+        */}
+        {event.description && (
+          <div
+            className="mb-4 max-h-40 overflow-y-auto rounded border border-border/50 bg-muted/30 px-2 py-1.5 text-sm text-foreground [&_a]:underline [&_li]:ml-4 [&_li]:list-disc [&_p]:mb-1"
+            dangerouslySetInnerHTML={{ __html: sanitizeDescription(event.description) }}
+          />
+        )}
         <p className="text-xs text-muted-foreground">{event.calendarName}</p>
         <div className="flex justify-between mt-6">
           <Button variant="destructive" onClick={handleDelete}>

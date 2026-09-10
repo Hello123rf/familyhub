@@ -1,4 +1,4 @@
-export { WeekItemCard } from './WeekItemCard';
+export { WeekItemCard, STRIPE_SHAPE, cardTitleClasses } from './WeekItemCard';
 export type { WeekItemVariant, WeekItemSize, WeekItemLayout } from './WeekItemCard';
 export { DayColumn } from './DayColumn';
 export type { OverlayFlags } from './DayColumn';
@@ -9,6 +9,6 @@ export { DroppableOverlayCell } from './DroppableOverlayCell';
 export { CardHeightProbe } from './CardHeightProbe';
 export { weatherIcon } from './weatherIcon';
 export { useDayDroppable } from './useDayDroppable';
-export { SpanningEventRows } from './SpanningEventRows';
+export { SpanningEventRows, spanningLaneInfo } from './SpanningEventRows';
 export { InlineCalendarEvent } from './InlineCalendarEvent';
 export { getMealTime, getChoreTime, getTaskTime, parseTimeOfDay, formatTimeOfDay, MEAL_TIME_DEFAULTS } from './itemTime';

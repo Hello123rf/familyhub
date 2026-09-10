@@ -182,6 +182,12 @@ jobs:
       - name: Run e2e modality suite
         run: npx playwright test e2e/reverse-proxy.spec.ts e2e/mobile-pwa-settings.spec.ts --reporter=list
 
+      # Geometry, separately: every calendar bug in the month grid has been a
+      # rendered box in the wrong place, which no unit test can see. The classes
+      # and props were correct each time.
+      - name: Run calendar geometry suite
+        run: npx playwright test e2e/calendar-geometry.spec.ts --reporter=list
+
       - name: Upload Playwright report on failure
         if: failure()
         uses: actions/upload-artifact@v4

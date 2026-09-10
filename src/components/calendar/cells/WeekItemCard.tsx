@@ -56,6 +56,17 @@ const PENDING_APPROVAL_OVERLAY = 'repeating-linear-gradient(45deg, rgba(168,85,2
  * 5px left stripe, and 1em title — we map those onto Tailwind tokens that
  * remain theme-aware.
  */
+/**
+ * The colour stripe carries NO radius of its own.
+ *
+ * It runs the full height and the card's `overflow-hidden` plus its own
+ * `rounded-md` mask it, so the curve you see on the stripe is literally the
+ * card's corner. Giving the stripe its own radius meant the same value read as
+ * much rounder on a short row than a tall one; letting the card do the masking
+ * makes it correct at every height by construction.
+ */
+export const STRIPE_SHAPE = 'shrink-0 self-stretch';
+
 const SIZE_STYLES: Record<WeekItemSize, {
   padding: string;
   titleText: string;
@@ -102,6 +113,19 @@ const SIZE_STYLES: Record<WeekItemSize, {
     showTime: true,
   },
 };
+
+/**
+ * The type a card's title is set in, for anything that has to sit beside one.
+ *
+ * Exported so the all-day band can read it rather than restate it. Restating a
+ * card's metrics somewhere else is how the band ended up with different
+ * padding, a different stripe width and, here, lighter and smaller titles than
+ * the cards directly beneath them.
+ */
+export function cardTitleClasses(size: WeekItemSize): string {
+  const styles = SIZE_STYLES[size];
+  return `${styles.titleText} ${styles.titleWeight}`;
+}
 
 export function WeekItemCard({
   variant,
@@ -176,7 +200,7 @@ export function WeekItemCard({
         {pendingApproval && (
           <span aria-hidden className="absolute inset-0 pointer-events-none" style={{ background: PENDING_APPROVAL_OVERLAY }} />
         )}
-        <span aria-hidden className={cn('shrink-0 self-stretch rounded-full', styles.stripeWidth)} style={{ backgroundColor: stripeColor }} />
+        <span aria-hidden className={cn(STRIPE_SHAPE, styles.stripeWidth)} style={{ backgroundColor: stripeColor }} />
         {styles.showTime && timeLabel && (
           <span className={cn('shrink-0 font-medium tabular-nums text-muted-foreground', styles.metaText)}>
             {timeLabel}
@@ -224,7 +248,7 @@ export function WeekItemCard({
       {pendingApproval && (
         <span aria-hidden className="absolute inset-0 pointer-events-none" style={{ background: PENDING_APPROVAL_OVERLAY }} />
       )}
-      <span aria-hidden className={cn('shrink-0 rounded-l-md', styles.stripeWidth)} style={{ backgroundColor: stripeColor }} />
+      <span aria-hidden className={cn(STRIPE_SHAPE, styles.stripeWidth)} style={{ backgroundColor: stripeColor }} />
 
       <div className={cn('flex min-w-0 flex-1 flex-col', styles.padding)}>
         {styles.showTime && timeLabel && (

@@ -96,8 +96,18 @@ export function MonthView({
   // Scope the wide event list to this month grid's visible range once, so the
   // spanning + per-day filters iterate ~40 events instead of thousands.
   const scopedEvents = eventsOverlappingRange(events, calendarStart, calendarEnd);
+  // Every all-day event goes in the lane band, not just the multi-day ones.
+  //
+  // Lanes are what stop a bar moving up and down as it crosses the week, and a
+  // single-day event that sits outside them cannot fill the space one leaves
+  // above itself. Put both kinds in the same system and the packing does it:
+  // if a three-day event took lane 1 because lane 0 was busy on its first day,
+  // a single-day event starting on its second day takes lane 0, because lane 0
+  // is free by then.
+  //
+  // A single-day event simply occupies one column, so it needs no special case.
   const spanningEvents = scopedEvents
-    .filter((event) => eventSpansMultipleDisplayDays(
+    .filter((event) => event.allDay || eventSpansMultipleDisplayDays(
       event.startTime,
       event.endTime,
       event.allDay,
@@ -232,6 +242,7 @@ function MonthDayCell({
   const today = isSameDay(date, toDisplayDate(new Date(), displayTimezone));
   const droppable = useDayDroppable({ date, enabled: cards && enableDnd });
 
+
   return (
     <div
       ref={cards && enableDnd ? droppable.setNodeRef : undefined}
@@ -262,7 +273,7 @@ function MonthDayCell({
         rowDates={rowDates}
         events={spanningEvents}
         onEventClick={onEventClick}
-        gap="1px"
+        cards={cards}
       />
 
       {cards ? (

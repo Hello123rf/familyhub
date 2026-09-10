@@ -15,7 +15,7 @@ import { hexToRgba } from '@/lib/utils/color';
 import { useWeekStartsOn } from '@/lib/hooks/useWeekStartsOn';
 import { seasonalPalettes } from '@/lib/themes/seasonalThemes';
 import type { CalendarEvent } from '@/types/calendar';
-import { CardHeightProbe, DayOverflowPopover, DroppableOverlayCell, InlineCalendarEvent, SpanningEventRows, WeekItemCard, useDayDroppable, weatherIcon, type OverlayItemRef } from './cells';
+import { CardHeightProbe, DayOverflowPopover, DroppableOverlayCell, InlineCalendarEvent, SpanningEventRows, WeekItemCard, cardTitleClasses, useDayDroppable, weatherIcon, type OverlayItemRef } from './cells';
 
 /** HSL color for the seasonal accent of the cell's month. */
 function getMonthAccentColor(date: Date): string {
@@ -92,8 +92,11 @@ export function MultiWeekView({
   // Scope the wide event list to the visible weeks once, so the spanning +
   // per-day filters iterate the local slice instead of thousands of events.
   const scopedEvents = eventsOverlappingRange(events, weekStart, addDays(weekStart, weekCount * 7));
+  // Every all-day event goes in the lane band, not just the multi-day ones, so
+  // a single-day event can take a lane a multi-day one leaves free above
+  // itself. Same rule as MonthView; see the note there.
   const spanningEvents = scopedEvents
-    .filter((event) => eventSpansMultipleDisplayDays(
+    .filter((event) => event.allDay || eventSpansMultipleDisplayDays(
       event.startTime,
       event.endTime,
       event.allDay,
@@ -347,7 +350,12 @@ function DayCell({
         events={spanningEvents}
         onEventClick={onEventClick}
         compact={compact}
-        gap="0.25rem"
+        cards={cards}
+        // Matches this view's event list below (line ~364).
+        padX={compact ? 'px-1' : 'px-1.5'}
+        // Matches the stripe on this view's cards: sm is 3px, md is 5px.
+        stripePx={compact ? 3 : 5}
+        titleClass={cardTitleClasses(cardSize)}
       />
 
       {/* Cards / events. In cards mode, meals render at the top of the day's
@@ -376,7 +384,11 @@ function DayCell({
                   stripeColor={event.color}
                   title={event.title}
                   timeLabel={event.allDay ? t('allDay') : formatDisplayTime(event.startTime, timeFormat, {}, displayTimezone)}
-                  subtitle={event.location || event.calendarName}
+                  // No third row at all. A location is worth knowing, but not at
+                  // the cost of a card that is three lines in one cell and two
+                  // in the next; the modal has it, and the grid is read from
+                  // across a room. Time and title only.
+                  subtitle={undefined}
                   onClick={() => onEventClick(event)}
                   dragId={draggable ? `event:${event.id}` : undefined}
                   subdued={isCalendarEventPast(

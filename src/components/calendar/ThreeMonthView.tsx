@@ -87,8 +87,11 @@ function MiniMonth({
   // Scope the wide event list to this mini-month's visible grid once, so the
   // spanning filter and the per-day filter below iterate ~40 events, not thousands.
   const scopedEvents = eventsOverlappingRange(events, calendarStart, calendarEnd);
+  // Every all-day event goes in the lane band, not just the multi-day ones, so
+  // a single-day event can take a lane a multi-day one leaves free above
+  // itself. Same rule as MonthView; see the note there.
   const spanningEvents = scopedEvents
-    .filter((event) => eventSpansMultipleDisplayDays(
+    .filter((event) => event.allDay || eventSpansMultipleDisplayDays(
       event.startTime,
       event.endTime,
       event.allDay,
@@ -179,7 +182,6 @@ function MiniMonth({
                       events={rowSpanningEvents}
                       onEventClick={onEventClick}
                       compact
-                      gap="1px"
                     />
                   )}
                   {/* Event list — scrollable within day cell */}
