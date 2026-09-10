@@ -38,6 +38,21 @@ set -uo pipefail
 
 REPO_FILES=$(git ls-files | grep -vE '^(scripts/scan-(pii|examples|hostnames|secrets)\.sh|scripts/prism-pii-denylist\.example\.txt|docs/code-review-modalities\.md|package-lock\.json|.*\.lock)$' || true)
 
+# The files above are skipped because they legitimately carry the detector
+# patterns themselves: this script holds the email and IP regexes, the template
+# holds placeholder values, and the modalities doc quotes examples. Layer 1
+# would match its own definitions.
+#
+# Layer 2 is different, and must NOT skip them. The denylist is a list of fixed
+# strings that live outside the repo, so a public file can be checked against it
+# without the file needing to contain one. Excluding these from Layer 2 as well
+# is what let PR #224 write a real household name into this script's own doc
+# comments and ship it: the file skipped its own scan, so CI could not see it,
+# and 12 forks synced that version before #225 removed it. Two of those forks
+# still show it today.
+SELF_EXCLUDED=$(git ls-files | grep -E '^(scripts/scan-(pii|examples|hostnames|secrets)\.sh|scripts/prism-pii-denylist\.example\.txt|docs/code-review-modalities\.md)$' || true)
+DENYLIST_FILES=$(printf '%s\n%s\n' "$REPO_FILES" "$SELF_EXCLUDED" | grep -v '^$' | sort -u)
+
 fail=0
 
 # ── Layer 1: built-in pattern rules ─────────────────────────────────────────
@@ -106,7 +121,7 @@ tmpfile=$(mktemp); trap 'rm -f "$tmpfile"' EXIT INT TERM
 sed -e 's/\r$//' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' "$DENYLIST" | grep -v '^$' | grep -v '^#' > "$tmpfile"
 
 if [ -s "$tmpfile" ]; then
-  m=$(printf '%s\n' "$REPO_FILES" | xargs -d '\n' grep -iwn -H -F -I -f "$tmpfile" 2>/dev/null || true)
+  m=$(printf '%s\n' "$DENYLIST_FILES" | xargs -d '\n' grep -iwn -H -F -I -f "$tmpfile" 2>/dev/null || true)
   if [ -n "$m" ]; then
     echo "[scan-pii] DENYLIST MATCHES:"
     printf '%s\n' "$m" | sed 's/^/  /'
