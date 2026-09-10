@@ -12,6 +12,12 @@
 #
 # dependabot[bot] is already on the CLA allowlist in .github/workflows/cla.yml,
 # so these do not get nagged for a signature.
+#
+# HOLDING SOME MAJORS. Each `ignore` below names a major that is known to break
+# today, so Dependabot stops re-proposing it every week. Read this before adding
+# another: an ignore rule also suppresses SECURITY updates that are only fixed in
+# the ignored major. Every entry here therefore carries the condition under which
+# it should be removed, and none of them is open-ended.
 version: 2
 updates:
   - package-ecosystem: npm
@@ -28,6 +34,21 @@ updates:
         update-types:
           - minor
           - patch
+    ignore:
+      # Next's tooling has to match Next. 16.x drops `next lint` and crashes on
+      # this eslint config (#407). Remove when Next itself goes to 16.
+      - dependency-name: "eslint-config-next"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@next/bundle-analyzer"
+        update-types: ["version-update:semver-major"]
+      # ioredis 6 and jest 30 are real API breaks. Remove when someone is
+      # actually doing that upgrade rather than reviewing a weekly PR for it.
+      - dependency-name: "ioredis"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "jest"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/jest"
+        update-types: ["version-update:semver-major"]
 
   # The MCP server carries its own manifest and lockfile, and nothing in the
   # root install reaches it.
@@ -44,6 +65,13 @@ updates:
         update-types:
           - minor
           - patch
+    ignore:
+      # TypeScript 7 is the native rewrite and zod 4 changes its API. Neither is
+      # a weekly-review decision. Remove when the MCP server is being ported.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "zod"
+        update-types: ["version-update:semver-major"]
 
   # Action pins in .github/workflows. Monthly: these move slowly and a stale
   # pin is a supply-chain surface of its own.
@@ -69,3 +97,9 @@ updates:
     open-pull-requests-limit: 3
     commit-message:
       prefix: "fix(docker)"
+    ignore:
+      # package.json declares engines.node >=24, and 26 does not reach LTS until
+      # October 2026. Changing this changes the runtime under everyone running
+      # the published image. Remove once 26 is LTS and engines moves with it.
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]
