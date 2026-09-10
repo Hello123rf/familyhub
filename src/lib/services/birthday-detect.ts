@@ -48,6 +48,7 @@ import { birthdays, calendarSources, dismissedBirthdays, events } from '@/lib/db
 import { and, eq, sql } from 'drizzle-orm';
 import { upsertBirthday } from './birthday-merge';
 import { invalidateEntity } from '@/lib/cache/cacheKeys';
+import { normalizePersonName } from '@/lib/utils/normalizePersonName';
 
 /** providerConfig flag marking a calendar as "everything all-day here is a life event". */
 export const LIFE_EVENTS_CALENDAR_KEY = 'lifeEventsCalendar';
@@ -180,10 +181,8 @@ export function parseEventTitle(
   return { name, eventType, birthDate: eventDate, year };
 }
 
-/** Matches normalize() in birthday-merge.ts so tombstones line up with merges. */
-function normalizeName(s: string): string {
-  return s.replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
-}
+/** The shared comparison form, so tombstones line up with merges. */
+const normalizeName = normalizePersonName;
 
 /**
  * Scan every enabled calendar for life events and upsert them.
