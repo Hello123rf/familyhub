@@ -16,6 +16,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, requireRole } from '@/lib/auth';
+import { patchEventSchema, validateRequest } from '@/lib/validations';
 import { db } from '@/lib/db/client';
 import { events, calendarSources, dismissedEvents } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
@@ -179,6 +180,17 @@ export async function PATCH(
     );
     if (canEdit) return canEdit;
 
+    // Until now PATCH validated title, the two dates and color by hand and let
+    // everything else through untouched, so description and location had no
+    // length bound at all: `updateEventSchema` existed and was never imported.
+    const validation = validateRequest(patchEventSchema, body);
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: validation.error.issues },
+        { status: 400 }
+      );
+    }
+
     // Build update object
     const updateData: Record<string, unknown> = {
       updatedAt: new Date(),
@@ -267,12 +279,40 @@ export async function PATCH(
       updateData.calendarSourceId = body.calendarSourceId || null;
     }
 
+    // POST refuses an end before its start; PATCH did not, so moving one edge
+    // of an existing event could invert it. Compare against what the event will
+    // actually be, not only against what this request carries.
+    const effectiveStart = (updateData.startTime as Date | undefined) ?? existingEvent.startTime;
+    const effectiveEnd = (updateData.endTime as Date | undefined) ?? existingEvent.endTime;
+    if (effectiveEnd < effectiveStart) {
+      return NextResponse.json(
+        { error: 'End time must be after start time' },
+        { status: 400 }
+      );
+    }
+
+    // Google is the only provider with a write path from this route. An event
+    // on any other synced calendar changes locally and nowhere else, so the next
+    // sync pulls the original back and the edit vanishes with no explanation.
+    // Say so at save time rather than letting it silently revert.
+    //
+    // Wiring the CalDAV writeback in here is its own piece of work: the endpoint
+    // at /api/caldav/events/[sourceId] rebuilds the VEVENT from uid, summary,
+    // description, location and dates alone, which would strip alarms,
+    // attendees and recurrence rules off a shared event.
+    let localOnlyWarning: string | null = null;
+
     // If event is linked to a Google Calendar, push updates to Google
     if (existingEvent.calendarSourceId && existingEvent.externalEventId) {
       const [calendarSource] = await db
         .select()
         .from(calendarSources)
         .where(eq(calendarSources.id, existingEvent.calendarSourceId));
+
+      if (calendarSource && calendarSource.provider !== 'google') {
+        localOnlyWarning =
+          'Prism cannot write to this calendar. The change is saved here, but the next sync will replace it with the version from that calendar.';
+      }
 
       if (calendarSource?.provider === 'google') {
         if (!calendarSource.accessToken) {
@@ -319,8 +359,11 @@ export async function PATCH(
           const newAllDay = updateData.allDay as boolean | undefined;
 
           if (newTitle !== undefined) googleUpdate.summary = newTitle;
-          if (newDesc !== undefined) googleUpdate.description = newDesc || undefined;
-          if (newLoc !== undefined) googleUpdate.location = newLoc || undefined;
+          // A clear has to travel as an empty string. Google reads a missing key
+          // as "leave it alone", so sending undefined cleared the field locally
+          // and let the next sync pull the old text straight back.
+          if (newDesc !== undefined) googleUpdate.description = newDesc ?? '';
+          if (newLoc !== undefined) googleUpdate.location = newLoc ?? '';
 
           // Handle date/time updates
           const finalAllDay = newAllDay !== undefined ? newAllDay : existingEvent.allDay;
@@ -428,6 +471,7 @@ export async function PATCH(
         : null,
       createdAt: updatedEvent.createdAt.toISOString(),
       updatedAt: updatedEvent.updatedAt.toISOString(),
+      ...(localOnlyWarning ? { warning: localOnlyWarning } : {}),
     });
   } catch (error) {
     logError('Error updating event:', error);
