@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: PII denylist + pattern rules
         run: bash scripts/scan-pii.sh
       - name: Hostname-in-comment heuristic
