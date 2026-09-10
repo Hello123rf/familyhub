@@ -19,11 +19,12 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth, getDisplayAuth } from '@/lib/auth';
+import { requireAuth, requireRole, getDisplayAuth } from '@/lib/auth';
 import { db } from '@/lib/db/client';
 import { events, calendarSources, users, calendarGroups } from '@/lib/db/schema';
 import { eq, and, or, gte, lte, asc, isNotNull, isNull } from 'drizzle-orm';
 import { createEventSchema, validateRequest } from '@/lib/validations';
+import { eventDescriptionToText } from '@/lib/utils/eventDescriptionText';
 import { getCached } from '@/lib/cache/redis';
 import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { createCalendarEvent, refreshAccessToken, toGoogleAllDayRange } from '@/lib/integrations/google-calendar';
@@ -207,6 +208,25 @@ export async function GET(request: NextRequest) {
       };
     }, EVENTS_CACHE_TTL);
 
+    // A Bearer token means the caller is not a browser: `scopes` is set only by
+    // API-token auth. The one token consumer that exists hands this straight to
+    // a language model, and there markup is an instruction channel rather than
+    // an XSS risk, because a title attribute or an HTML comment is text a
+    // person cannot see and a model still reads. Descriptions are stored
+    // exactly as the invite sender wrote them (the sync path writes upstream
+    // HTML to the row untouched), so this is the boundary that has to flatten
+    // them. Done after the cache read so one cached payload serves both kinds
+    // of caller.
+    if (auth.scopes !== undefined) {
+      return NextResponse.json({
+        ...data,
+        events: data.events.map((event) => ({
+          ...event,
+          description: event.description === null ? null : eventDescriptionToText(event.description),
+        })),
+      });
+    }
+
     return NextResponse.json(data);
   } catch (error) {
     logError('Error fetching events:', error);
@@ -258,6 +278,11 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const auth = await requireAuth();
   if (auth instanceof NextResponse) return auth;
+
+  // PATCH and DELETE have always checked a role; POST never did, so a guest
+  // account (canAddEvent: false) could put an event on the family display.
+  const denied = requireRole(auth, 'canAddEvent');
+  if (denied) return denied;
 
   const { rateLimitGuard } = await import('@/lib/cache/rateLimit');
   const limited = await rateLimitGuard(auth.userId, 'events', 30, 60);
