@@ -1,0 +1,71 @@
+# Dependabot version updates.
+#
+# This file only covers scheduled version updates. Security updates are a
+# separate switch in repository settings (Dependabot alerts + Dependabot
+# security updates), and those open PRs immediately when an advisory lands
+# rather than waiting for the schedule below.
+#
+# Grouped on purpose. Prism has one maintainer, so a queue of twenty single
+# dependency PRs is worse than one batch: minor and patch updates arrive as a
+# single PR per ecosystem, and majors stay on their own because those are the
+# ones that need reading.
+#
+# dependabot[bot] is already on the CLA allowlist in .github/workflows/cla.yml,
+# so these do not get nagged for a signature.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "fix(deps)"
+      prefix-development: "chore(deps)"
+    groups:
+      npm-minor-and-patch:
+        update-types:
+          - minor
+          - patch
+
+  # The MCP server carries its own manifest and lockfile, and nothing in the
+  # root install reaches it.
+  - package-ecosystem: npm
+    directory: "/.mcp"
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "fix(mcp)"
+      prefix-development: "chore(mcp)"
+    groups:
+      mcp-minor-and-patch:
+        update-types:
+          - minor
+          - patch
+
+  # Action pins in .github/workflows. Monthly: these move slowly and a stale
+  # pin is a supply-chain surface of its own.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "ci"
+    groups:
+      actions:
+        update-types:
+          - minor
+          - patch
+
+  # Base images in the Dockerfile. The published image is what most people run,
+  # so a stale base is their exposure, not just this repo's.
+  - package-ecosystem: docker
+    directory: "/"
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "fix(docker)"
