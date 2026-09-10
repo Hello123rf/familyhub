@@ -39,6 +39,31 @@ export const createEventSchema = eventBaseSchema.refine(
 
 export const updateEventSchema = eventBaseSchema.partial();
 
+/**
+ * PATCH /api/events/[id].
+ *
+ * PATCH semantics are not POST semantics: an absent key means "leave this
+ * alone", and an explicit null means "clear it". `.partial()` can only express
+ * the first, so every field a person can empty out is nullable here. Without
+ * that, a cleared description had no way to reach the server at all.
+ *
+ * startTime and endTime are omitted on purpose. The route parses them with
+ * `new Date()` and rejects NaN, which accepts more shapes than
+ * `z.string().datetime()` does, and tightening that is a separate decision
+ * from bounding the text fields.
+ */
+export const patchEventSchema = eventBaseSchema
+  .omit({ startTime: true, endTime: true })
+  .partial()
+  .extend({
+    description: eventBaseSchema.shape.description.unwrap().nullish(),
+    location: eventBaseSchema.shape.location.unwrap().nullish(),
+    recurrenceRule: eventBaseSchema.shape.recurrenceRule.unwrap().nullish(),
+    color: hexColorSchema.nullish(),
+    reminderMinutes: eventBaseSchema.shape.reminderMinutes.unwrap().nullish(),
+    calendarSourceId: uuidSchema.nullish(),
+  });
+
 // TASK SCHEMAS
 
 export const createTaskSchema = z.object({

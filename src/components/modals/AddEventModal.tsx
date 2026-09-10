@@ -347,18 +347,25 @@ export function AddEventModal({
 
     try {
       const recurring = !!recurrenceRule;
+
+      // An emptied field has to travel as an explicit null when editing. PATCH
+      // only touches keys that are present in the body, and JSON.stringify
+      // drops undefined ones, so sending undefined said "leave this alone":
+      // clearing a description, a location or a reminder never reached the
+      // server. On create there is nothing to clear, so undefined is right.
+      const cleared = isEditMode ? null : undefined;
       const payload: Record<string, unknown> = {
         title: title.trim(),
-        description: description.trim() || undefined,
-        location: location.trim() || undefined,
+        description: description.trim() || cleared,
+        location: location.trim() || cleared,
         startTime: startISO,
         endTime: endISO,
         allDay,
         recurring,
-        recurrenceRule: recurring ? recurrenceRule : undefined,
-        reminderMinutes: reminderMinutes !== '' ? Number(reminderMinutes) : undefined,
-        calendarSourceId: calendarSourceId || undefined,
-        color: eventColor || undefined,
+        recurrenceRule: recurring ? recurrenceRule : cleared,
+        reminderMinutes: reminderMinutes !== '' ? Number(reminderMinutes) : cleared,
+        calendarSourceId: calendarSourceId || cleared,
+        color: eventColor || cleared,
       };
 
       const url = isEditMode ? `/api/events/${event.id}` : '/api/events';

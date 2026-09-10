@@ -472,6 +472,20 @@ export interface CalDAVEventWrite {
   allDay?: boolean;
 }
 
+/**
+ * Strip bare carriage returns from a value bound for an iCalendar property.
+ *
+ * ical.js escapes `\n`, `;`, `,` and `\\`, but passes a lone `\r` through
+ * unchanged. A strict RFC 5545 parser only splits on CRLF and is unaffected,
+ * but a lenient server or a client that normalises line endings turns that CR
+ * into a line break, and the rest of the value becomes a forged content line:
+ * an ATTENDEE, an ORGANIZER, a URL. Descriptions come from whoever wrote the
+ * event, so the value is untrusted by the time it reaches here.
+ */
+function icalSafe(value: string): string {
+  return value.replace(/\r/g, '');
+}
+
 /** Serialize a single VEVENT into a complete VCALENDAR string. */
 function buildVEventICalString(ev: CalDAVEventWrite): string {
   const vcalendar = new ICAL.Component(['vcalendar', [], []]);
@@ -479,10 +493,10 @@ function buildVEventICalString(ev: CalDAVEventWrite): string {
   vcalendar.updatePropertyWithValue('version', '2.0');
 
   const vevent = new ICAL.Component('vevent');
-  vevent.updatePropertyWithValue('uid', ev.uid);
-  vevent.updatePropertyWithValue('summary', ev.title);
-  if (ev.description) vevent.updatePropertyWithValue('description', ev.description);
-  if (ev.location) vevent.updatePropertyWithValue('location', ev.location);
+  vevent.updatePropertyWithValue('uid', icalSafe(ev.uid));
+  vevent.updatePropertyWithValue('summary', icalSafe(ev.title));
+  if (ev.description) vevent.updatePropertyWithValue('description', icalSafe(ev.description));
+  if (ev.location) vevent.updatePropertyWithValue('location', icalSafe(ev.location));
 
   const dtstamp = ICAL.Time.now();
   dtstamp.zone = ICAL.Timezone.utcTimezone;
