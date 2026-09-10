@@ -101,18 +101,40 @@ jobs:
       - name: Run migration replay script
         run: bash scripts/test-migration-replay.sh
 
+  playwright-image:
+    name: Resolve Playwright image tag
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.resolve.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v7
+
+      # The container image and @playwright/test must move together, or the
+      # browser binaries in the image do not match the client and every spec
+      # fails with "Executable doesn't exist at /ms-playwright/...". Deriving
+      # the tag from package.json means Dependabot's bump carries the image
+      # with it: Dependabot cannot edit a workflow `container:` field, so a
+      # hardcoded tag had to be fixed by hand on every Playwright bump.
+      - id: resolve
+        run: |
+          version=$(node -p "require('./package.json').devDependencies['@playwright/test'].replace(/^[^0-9]*/, '')")
+          echo "tag=v${version}-jammy" >> "$GITHUB_OUTPUT"
+          echo "Playwright image: mcr.microsoft.com/playwright:v${version}-jammy"
+
   e2e-modality:
     name: E2E modality suite (reverse-proxy)
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    needs: playwright-image
 
     # Use the official Playwright container so Chromium is preinstalled.
     # Previously the job downloaded Chromium from cdn.playwright.dev at
     # job start, which began hanging indefinitely on GH-hosted runners
-    # around 2026-05-29 and killed the job at the timeout. Image must be
-    # kept in lockstep with @playwright/test in package.json.
+    # around 2026-05-29 and killed the job at the timeout. The tag comes
+    # from @playwright/test in package.json via the playwright-image job,
+    # so the two cannot drift apart.
     container:
-      image: mcr.microsoft.com/playwright:v1.63.0-jammy
+      image: mcr.microsoft.com/playwright:${{ needs.playwright-image.outputs.tag }}
 
     services:
       postgres:
@@ -200,10 +222,11 @@ jobs:
     name: Visual regression (modality TODO #2)
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    needs: playwright-image
 
     # See e2e-modality for why we run inside the Playwright image.
     container:
-      image: mcr.microsoft.com/playwright:v1.63.0-jammy
+      image: mcr.microsoft.com/playwright:${{ needs.playwright-image.outputs.tag }}
 
     services:
       postgres:
