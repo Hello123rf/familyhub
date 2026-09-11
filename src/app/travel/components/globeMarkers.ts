@@ -1,4 +1,4 @@
-import maplibregl from 'maplibre-gl';
+import type * as maplibregl from 'maplibre-gl';
 import type { TravelPin } from '../types';
 import { STATUS_CONFIG, BUCKET_LIST_COLOR, NPS_COLOR } from '../types';
 

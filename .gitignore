@@ -143,3 +143,4 @@ transcript*.json
 # Lighthouse reports
 lighthouse-*
 /public/twemoji/
+/public/maplibre/
