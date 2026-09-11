@@ -15,15 +15,36 @@ env:
   NODE_VERSION: '24'
 
 jobs:
+  playwright-image:
+    name: Resolve Playwright image tag
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.resolve.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v7
+
+      # The container image and @playwright/test must move together, or the
+      # browser binaries in the image do not match the client and every spec
+      # fails with "Executable doesn't exist at /ms-playwright/...". Deriving
+      # the tag from package.json means Dependabot's bump carries the image
+      # with it: Dependabot cannot edit a workflow `container:` field, so a
+      # hardcoded tag had to be fixed by hand on every Playwright bump.
+      - id: resolve
+        run: |
+          version=$(node -p "require('./package.json').devDependencies['@playwright/test'].replace(/^[^0-9]*/, '')")
+          echo "tag=v${version}-jammy" >> "$GITHUB_OUTPUT"
+          echo "Playwright image: mcr.microsoft.com/playwright:v${version}-jammy"
+
   ui-audit:
     name: UI audit sweep (responsive + display-scale)
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    needs: playwright-image
 
-    # Official Playwright image so Chromium is preinstalled (kept in lockstep
-    # with @playwright/test — see the visual-regression job in ci.yml).
+    # Official Playwright image so Chromium is preinstalled (tag derived from
+    # @playwright/test — see the playwright-image job above).
     container:
-      image: mcr.microsoft.com/playwright:v1.63.0-jammy
+      image: mcr.microsoft.com/playwright:${{ needs.playwright-image.outputs.tag }}
 
     services:
       postgres:
