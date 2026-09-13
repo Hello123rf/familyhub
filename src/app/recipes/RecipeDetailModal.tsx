@@ -82,11 +82,20 @@ export function RecipeDetailModal({
     try {
       // Scale ingredients before adding. Section headings are filtered out —
       // they aren't shopping items, just visual grouping in the recipe view.
+      // Ingredients the user has ticked off (already have it) are excluded —
+      // ticking one here previously only struck it through visually; it was
+      // still sent to the shopping list along with everything else.
       const scaledIngredients = recipe.ingredients
-        .filter((ing) => ing.text && !ing.heading)
-        .map((ing) => ({
+        .map((ing, index) => ({ ing, index }))
+        .filter(({ ing, index }) => ing.text && !ing.heading && !checkedIngredients.has(index))
+        .map(({ ing }) => ({
           text: scaleIngredient(ing.text ?? ''),
         }));
+      if (scaledIngredients.length === 0) {
+        toast({ title: 'All ingredients are already checked off — nothing to add', variant: 'warning' });
+        setShowListPicker(false);
+        return;
+      }
       await onAddToShoppingList(listId, scaledIngredients);
       setShowListPicker(false);
       toast({ title: `Added ${scaledIngredients.length} ingredients to shopping list!`, variant: 'success' });
