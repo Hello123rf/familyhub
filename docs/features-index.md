@@ -32,7 +32,7 @@ Multiple lists per family (groceries, hardware, target run, etc.). Microsoft To 
 
 Weekly meal grid. Drag-and-drop meals to days. Recipe library with Paprika import + OCR text recognition. Generated shopping lists pull ingredients straight from planned meals.
 
-→ Full docs: [Meals](features/RECIPES.md)
+→ Full docs: [Meals](features/RECIPES.md) · [Recipe Capture (Shortcut/bookmarklet)](features/RECIPE_CAPTURE.md)
 
 ## Photos
 

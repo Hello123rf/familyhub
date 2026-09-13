@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db/client';
 import { recipes, users } from '@/lib/db/schema';
-import { eq, desc, ilike, or, sql } from 'drizzle-orm';
+import { eq, desc, ilike, or, sql, ne } from 'drizzle-orm';
 import { requireAuth, requireRole, getDisplayAuth } from '@/lib/auth';
 import { getCached } from '@/lib/cache/redis';
 import { invalidateEntity } from '@/lib/cache/cacheKeys';
@@ -13,6 +13,7 @@ async function fetchRecipes(
   category: string | null,
   cuisine: string | null,
   favorite: string | null,
+  reviewStatus: 'inbox' | 'saved' | null,
   limit: number,
   offset: number
 ) {
@@ -23,6 +24,7 @@ async function fetchRecipes(
       description: recipes.description,
       url: recipes.url,
       sourceType: recipes.sourceType,
+      reviewStatus: recipes.reviewStatus,
       ingredients: recipes.ingredients,
       instructions: recipes.instructions,
       notes: recipes.notes,
@@ -49,6 +51,14 @@ async function fetchRecipes(
     .offset(offset);
 
   const conditions = [];
+
+  // Inbox items are hidden from the normal library by default — they only
+  // show up when explicitly requested (the Recipe Inbox tab).
+  if (reviewStatus) {
+    conditions.push(eq(recipes.reviewStatus, reviewStatus));
+  } else {
+    conditions.push(ne(recipes.reviewStatus, 'inbox'));
+  }
 
   if (search) {
     conditions.push(
@@ -81,10 +91,17 @@ async function fetchRecipes(
 
   const recipeList = await query;
 
-  // Get total count for pagination
-  const countResult = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(recipes);
+  // Get total count for pagination, honoring the same filters (notably
+  // reviewStatus — otherwise the total would include hidden inbox rows).
+  let countQuery = db.select({ count: sql<number>`count(*)::int` }).from(recipes);
+  if (conditions.length > 0) {
+    for (const condition of conditions) {
+      if (condition) {
+        countQuery = countQuery.where(condition) as typeof countQuery;
+      }
+    }
+  }
+  const countResult = await countQuery;
   const totalCount = countResult[0]?.count ?? 0;
 
   return {
@@ -107,22 +124,27 @@ export async function GET(request: NextRequest) {
     const category = searchParams.get('category');
     const cuisine = searchParams.get('cuisine');
     const favorite = searchParams.get('favorite');
+    const reviewStatusParam = searchParams.get('reviewStatus');
+    const reviewStatus: 'inbox' | 'saved' | null =
+      reviewStatusParam === 'inbox' || reviewStatusParam === 'saved' ? reviewStatusParam : null;
     const limit = parseInt(searchParams.get('limit') || '50', 10);
     const offset = parseInt(searchParams.get('offset') || '0', 10);
 
-    // Only cache if no search/filters
-    if (!search && !category && !cuisine && !favorite) {
+    // Only cache the plain default view (no filters, no explicit reviewStatus —
+    // e.g. the Recipe Inbox's ?reviewStatus=inbox request must never share this
+    // cache entry with the normal library view).
+    if (!search && !category && !cuisine && !favorite && !reviewStatus) {
       const cacheKey = `recipes:default:${limit}:${offset}`;
       const result = await getCached(
         cacheKey,
-        () => fetchRecipes(search, category, cuisine, favorite, limit, offset),
+        () => fetchRecipes(search, category, cuisine, favorite, reviewStatus, limit, offset),
         300
       );
       return NextResponse.json(result);
     }
 
     // With filters, don't cache
-    const result = await fetchRecipes(search, category, cuisine, favorite, limit, offset);
+    const result = await fetchRecipes(search, category, cuisine, favorite, reviewStatus, limit, offset);
     return NextResponse.json(result);
   } catch (error) {
     logError('Error fetching recipes:', error);
@@ -191,6 +213,7 @@ export async function POST(request: NextRequest) {
         description: recipes.description,
         url: recipes.url,
         sourceType: recipes.sourceType,
+        reviewStatus: recipes.reviewStatus,
         ingredients: recipes.ingredients,
         instructions: recipes.instructions,
         notes: recipes.notes,

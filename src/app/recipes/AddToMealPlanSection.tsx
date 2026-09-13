@@ -33,7 +33,7 @@ function buildCalendarWeeks(today: Date, weekStartsOn: 0 | 1): Date[][] {
 const DAY_HEADERS_SUN = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const DAY_HEADERS_MON = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
-export function AddToMealPlanSection({ recipe }: { recipe: Recipe }) {
+export function AddToMealPlanSection({ recipe, onPromoted }: { recipe: Recipe; onPromoted?: () => void }) {
   const { requireAuth } = useAuth();
   const weekStartsOn = getWeekStartsOn();
   const today = startOfDay(new Date());
@@ -49,6 +49,22 @@ export function AddToMealPlanSection({ recipe }: { recipe: Recipe }) {
     if (!await requireAuth('Add to Meal Plan', 'Please log in to add meals')) return;
     setSaving(true);
     try {
+      // An inbox recipe (captured but not yet reviewed) is promoted to the
+      // normal library the moment it's meal-planned — from then on it's a
+      // regular saved recipe, so it also drops out of the Recipe Inbox tab
+      // (and, notably, out of reach of the Inbox's "Discard" action, which
+      // is the point: once it's on the plan, deleting it goes through the
+      // same confirmation as deleting any other saved recipe).
+      if (recipe.reviewStatus === 'inbox') {
+        const promoteRes = await fetch(`/api/recipes/${recipe.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reviewStatus: 'saved' }),
+        });
+        if (!promoteRes.ok) throw new Error('promote-failed');
+        onPromoted?.();
+      }
+
       const weekOf = format(startOfWeek(selectedDate, { weekStartsOn: 1 }), 'yyyy-MM-dd');
       const dayOfWeek = format(selectedDate, 'EEEE').toLowerCase();
       const res = await fetch('/api/meals', {
@@ -56,7 +72,16 @@ export function AddToMealPlanSection({ recipe }: { recipe: Recipe }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: recipe.name, recipeId: recipe.id, weekOf, dayOfWeek, mealType }),
       });
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        // The recipe was already promoted/saved successfully above — this
+        // is a recoverable "try again from Recipes" state, not data loss.
+        if (recipe.reviewStatus === 'inbox') {
+          toast({ title: 'Saved to your recipes, but adding to the plan failed — try again from Recipes', variant: 'destructive' });
+        } else {
+          toast({ title: 'Failed to add to meal plan', variant: 'destructive' });
+        }
+        return;
+      }
       const dayLabel = isSameDay(selectedDate, today) ? 'today'
         : isSameDay(selectedDate, addDays(today, 1)) ? 'tomorrow'
         : format(selectedDate, 'EEEE').toLowerCase();

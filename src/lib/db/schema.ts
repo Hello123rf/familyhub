@@ -583,7 +583,14 @@ export const recipes = pgTable('recipes', {
 
   // Where did this recipe come from?
   sourceType: varchar('source_type', { length: 50 }).default('manual').notNull()
-    .$type<'manual' | 'url_import' | 'paprika_import' | 'tandoor_import'>(),
+    .$type<'manual' | 'url_import' | 'paprika_import' | 'tandoor_import' | 'lan_capture'>(),
+
+  // 'inbox' = captured but not yet reviewed (Recipe Inbox); 'saved' = in the
+  // normal library. Kept on the same table rather than a second one so the
+  // Inbox reuses recipes CRUD, the meal-planner link, and the shopping-list
+  // ingredient flow unmodified — an inbox recipe IS a recipe, just unreviewed.
+  reviewStatus: varchar('review_status', { length: 20 }).default('saved').notNull()
+    .$type<'inbox' | 'saved'>(),
 
   // Sync-source linkage (for recipes pulled from a Tandoor/Mealie source).
   // (sourceId, externalId) keys the review-and-approve sync; externalUpdatedAt
@@ -629,6 +636,7 @@ export const recipes = pgTable('recipes', {
   nameIdx: index('recipes_name_idx').on(table.name),
   favoriteIdx: index('recipes_favorite_idx').on(table.isFavorite),
   sourceTypeIdx: index('recipes_source_type_idx').on(table.sourceType),
+  reviewStatusIdx: index('recipes_review_status_idx').on(table.reviewStatus),
   // Upsert/match key for synced recipes. (null, null) local rows don't collide
   // — Postgres treats NULLs as distinct in a unique index.
   sourceExternalUnique: uniqueIndex('recipes_source_external_unique').on(table.sourceId, table.externalId),

@@ -27,6 +27,7 @@ export async function GET(
         description: recipes.description,
         url: recipes.url,
         sourceType: recipes.sourceType,
+        reviewStatus: recipes.reviewStatus,
         ingredients: recipes.ingredients,
         instructions: recipes.instructions,
         prepTime: recipes.prepTime,
@@ -161,6 +162,16 @@ export async function PATCH(
 
     if ('isFavorite' in body) {
       updateData.isFavorite = Boolean(body.isFavorite);
+    }
+
+    if ('reviewStatus' in body) {
+      if (body.reviewStatus !== 'saved' && body.reviewStatus !== 'inbox') {
+        return NextResponse.json(
+          { error: "reviewStatus must be 'saved' or 'inbox'" },
+          { status: 400 }
+        );
+      }
+      updateData.reviewStatus = body.reviewStatus;
     }
 
     if ('timesMade' in body) {

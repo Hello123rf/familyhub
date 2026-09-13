@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { toast } from '@/components/ui/use-toast';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog';
-import { ChefHat, Plus, Search, Heart, X, Link2, FileUp, PenLine, ChevronDown, ClipboardPaste, Soup } from 'lucide-react';
+import { ChefHat, Plus, Search, Heart, X, Link2, FileUp, PenLine, ChevronDown, ClipboardPaste, Soup, Inbox } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -23,6 +23,7 @@ import { useShoppingLists } from '@/lib/hooks/useShoppingLists';
 import { useAuth } from '@/components/providers';
 import { useRecipesFilters } from './useRecipesFilters';
 import { RecipeCard } from './RecipeCard';
+import { RecipeInboxCard } from './RecipeInboxCard';
 import { RecipeDetailModal } from './RecipeDetailModal';
 import { RecipeFormModal } from './RecipeFormModal';
 import { ImportUrlModal } from './ImportUrlModal';
@@ -31,7 +32,7 @@ import { ImportTextModal } from './ImportTextModal';
 import { RecipeSyncModal } from '@/components/sync/RecipeSyncModal';
 import type { ParsedRecipeText } from '@/lib/utils/recipeTextParser';
 
-type ViewMode = 'all' | 'favorites';
+type ViewMode = 'all' | 'favorites' | 'inbox';
 
 export function RecipesView() {
   const { requireAuth } = useAuth();
@@ -52,6 +53,38 @@ export function RecipesView() {
   const { recipes, loading, error, deleteRecipe, toggleFavorite, importFromUrl, importFromPaprika, createRecipe, updateRecipe, refresh } = useRecipes({
     favorite: viewMode === 'favorites' ? true : undefined,
   });
+
+  // Fetched independently of viewMode so the Inbox tab's count badge is
+  // always current, not just while the Inbox tab itself is open.
+  const { recipes: inboxRecipes, refresh: refreshInbox } = useRecipes({ reviewStatus: 'inbox' });
+
+  const refreshBoth = () => { refresh(); refreshInbox(); };
+
+  const handleSaveInbox = async (recipe: Recipe) => {
+    try {
+      const res = await fetch(`/api/recipes/${recipe.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reviewStatus: 'saved' }),
+      });
+      if (!res.ok) throw new Error();
+      toast({ title: `Saved "${recipe.name}" to your recipes`, variant: 'success' });
+      refreshBoth();
+    } catch {
+      toast({ title: 'Failed to save recipe', variant: 'destructive' });
+    }
+  };
+
+  const handleDiscardInbox = async (recipe: Recipe) => {
+    if (!await confirm(`Discard "${recipe.name}"?`, 'This cannot be undone.')) return;
+    try {
+      const res = await fetch(`/api/recipes/${recipe.id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error();
+      refreshInbox();
+    } catch {
+      toast({ title: 'Failed to discard recipe', variant: 'destructive' });
+    }
+  };
 
   const {
     search, setSearch,
@@ -169,6 +202,13 @@ export function RecipesView() {
               onClick={() => setViewMode('favorites')} className="h-8">
               <Heart className="h-4 w-4 mr-1" />Favorites
             </Button>
+            <Button variant={viewMode === 'inbox' ? 'secondary' : 'ghost'} size="sm"
+              onClick={() => setViewMode('inbox')} className="h-8">
+              <Inbox className="h-4 w-4 mr-1" />Inbox
+              {inboxRecipes.length > 0 && (
+                <Badge variant="secondary" className="ml-1.5 h-4 px-1 text-[10px]">{inboxRecipes.length}</Badge>
+              )}
+            </Button>
           </div>
           {cuisines.length > 0 && (
             <>
@@ -196,7 +236,24 @@ export function RecipesView() {
         </FilterBar>
 
         <div className="flex-1 overflow-y-auto p-4">
-          {loading ? (
+          {viewMode === 'inbox' ? (
+            inboxRecipes.length === 0 ? (
+              <EmptyState
+                icon={<Inbox />}
+                title="No captured recipes waiting for review"
+                action={<p className="text-sm text-muted-foreground">Recipes saved from your phone or laptop will show up here.</p>}
+              />
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 max-w-4xl mx-auto">
+                {inboxRecipes.map(recipe => (
+                  <RecipeInboxCard key={recipe.id} recipe={recipe}
+                    onSave={() => handleSaveInbox(recipe)}
+                    onDiscard={() => handleDiscardInbox(recipe)}
+                    onPromoted={refreshBoth} />
+                ))}
+              </div>
+            )
+          ) : loading ? (
             <PageLoader />
           ) : error ? (
             <div className="text-center py-12 text-destructive">{error}</div>

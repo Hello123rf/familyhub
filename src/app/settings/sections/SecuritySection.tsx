@@ -19,15 +19,17 @@ interface ApiToken {
   createdAt: string;
 }
 
-type TokenScopeChoice = 'voice' | '*';
+type TokenScopeChoice = 'voice' | 'recipe:capture' | '*';
 
 const SCOPE_LABELS: Record<TokenScopeChoice, string> = {
   voice: 'Voice API only (recommended)',
+  'recipe:capture': 'Recipe capture only (Apple Shortcut)',
   '*': 'Full access (legacy)',
 };
 
 const SCOPE_DESCRIPTIONS: Record<TokenScopeChoice, string> = {
   voice: 'Limited to /api/v1/voice/* — for Alexa skills, Home Assistant, voice agents.',
+  'recipe:capture': 'Limited to /api/recipe-capture, and only over your home network — for a phone Shortcut that saves recipe pages to the Recipe Inbox. See docs/features/RECIPE_CAPTURE.md.',
   '*': 'Grants parent-level access to every endpoint. Use only for tools that need full control.',
 };
 
@@ -200,7 +202,7 @@ export function SecuritySection() {
                 onChange={(e) => setNewTokenScope(e.target.value as TokenScopeChoice)}
                 aria-label="Token scope"
               >
-                {(['voice', '*'] as const).map((scope) => (
+                {(['voice', 'recipe:capture', '*'] as const).map((scope) => (
                   <option key={scope} value={scope}>{SCOPE_LABELS[scope]}</option>
                 ))}
               </select>

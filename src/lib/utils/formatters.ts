@@ -386,6 +386,7 @@ export function formatRecipeRow(row: {
   description: string | null;
   url: string | null;
   sourceType: string;
+  reviewStatus: string;
   ingredients: unknown;
   instructions: string | null;
   notes: string | null;
@@ -411,6 +412,7 @@ export function formatRecipeRow(row: {
     description: row.description,
     url: row.url,
     sourceType: row.sourceType,
+    reviewStatus: row.reviewStatus,
     ingredients: row.ingredients,
     instructions: row.instructions,
     notes: row.notes,

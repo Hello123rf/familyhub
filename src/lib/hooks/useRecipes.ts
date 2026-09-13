@@ -25,7 +25,8 @@ export interface Recipe {
   name: string;
   description?: string | null;
   url?: string | null;
-  sourceType: 'manual' | 'url_import' | 'paprika_import' | 'tandoor_import';
+  sourceType: 'manual' | 'url_import' | 'paprika_import' | 'tandoor_import' | 'lan_capture';
+  reviewStatus: 'inbox' | 'saved';
   ingredients: RecipeIngredient[];
   instructions?: string | null;
   prepTime?: number | null;
@@ -58,6 +59,8 @@ interface UseRecipesOptions {
   category?: string;
   cuisine?: string;
   favorite?: boolean;
+  /** Omit for the normal library (server excludes 'inbox' by default). Pass 'inbox' for the Recipe Inbox tab. */
+  reviewStatus?: 'inbox' | 'saved';
   limit?: number;
   offset?: number;
 }
@@ -92,10 +95,11 @@ export function useRecipes(options: UseRecipesOptions = {}) {
     if (options.category) params.set('category', options.category);
     if (options.cuisine) params.set('cuisine', options.cuisine);
     if (options.favorite) params.set('favorite', 'true');
+    if (options.reviewStatus) params.set('reviewStatus', options.reviewStatus);
     if (options.limit) params.set('limit', options.limit.toString());
     if (options.offset) params.set('offset', options.offset.toString());
     return `/api/recipes${params.toString() ? `?${params}` : ''}`;
-  }, [options.search, options.category, options.cuisine, options.favorite, options.limit, options.offset]);
+  }, [options.search, options.category, options.cuisine, options.favorite, options.reviewStatus, options.limit, options.offset]);
 
   const cached = navCacheGet<{ recipes: Recipe[]; total: number }>(cacheKey);
   const [recipes, setRecipes] = useState<Recipe[]>(() => cached?.recipes ?? []);
