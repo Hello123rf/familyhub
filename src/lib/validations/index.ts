@@ -330,7 +330,7 @@ export const calendarNotesQuerySchema = z.object({
  * should be added here AND enforced by `withAuth({ tokenScope: ... })`
  * on the endpoints they cover.
  */
-export const TOKEN_SCOPES = ['*', 'voice'] as const;
+export const TOKEN_SCOPES = ['*', 'voice', 'recipe:capture'] as const;
 export type TokenScope = (typeof TOKEN_SCOPES)[number];
 
 export const createApiTokenSchema = z.object({

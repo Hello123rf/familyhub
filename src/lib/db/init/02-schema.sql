@@ -543,7 +543,8 @@ CREATE TABLE IF NOT EXISTS public.recipes (
     is_favorite boolean DEFAULT false NOT NULL,
     created_by uuid,
     created_at timestamp without time zone DEFAULT now() NOT NULL,
-    updated_at timestamp without time zone DEFAULT now() NOT NULL
+    updated_at timestamp without time zone DEFAULT now() NOT NULL,
+    review_status character varying(20) DEFAULT 'saved'::character varying NOT NULL
 );
 
 
@@ -1604,6 +1605,9 @@ CREATE INDEX IF NOT EXISTS recipes_name_idx ON public.recipes USING btree (name)
 --
 
 CREATE INDEX IF NOT EXISTS recipes_source_type_idx ON public.recipes USING btree (source_type);
+
+
+CREATE INDEX IF NOT EXISTS recipes_review_status_idx ON public.recipes USING btree (review_status);
 
 
 --
