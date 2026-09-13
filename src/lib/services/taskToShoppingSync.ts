@@ -7,8 +7,8 @@
 
 import { db } from '@/lib/db/client';
 import { tasks, shoppingItems, shoppingLists } from '@/lib/db/schema';
-import { eq, ilike, asc, desc } from 'drizzle-orm';
-import { guessShoppingCategory } from '@/lib/utils/guessShoppingCategory';
+import { eq, asc } from 'drizzle-orm';
+import { resolveShoppingCategory } from '@/lib/services/resolveShoppingCategory';
 import { invalidateEntity } from '@/lib/cache/cacheKeys';
 
 export interface MoveResult {
@@ -35,17 +35,7 @@ export async function moveTaskToShoppingItem(
 
   if (!targetList) return null;
 
-  // 1. History: most recent past item with the same name, any list —
-  // reflects how this specific household already categorizes things.
-  const [historyMatch] = await db
-    .select({ category: shoppingItems.category })
-    .from(shoppingItems)
-    .where(ilike(shoppingItems.name, task.title))
-    .orderBy(desc(shoppingItems.updatedAt))
-    .limit(1);
-
-  // 2. Keyword fallback for items with no purchase history yet.
-  const category = historyMatch?.category ?? guessShoppingCategory(task.title);
+  const category = await resolveShoppingCategory(task.title);
 
   const [newItem] = await db
     .insert(shoppingItems)

@@ -20,6 +20,7 @@ import { shoppingItems, users } from '@/lib/db/schema';
 import { eq, and, asc } from 'drizzle-orm';
 import { createShoppingItemSchema, validateRequest } from '@/lib/validations';
 import { invalidateEntity } from '@/lib/cache/cacheKeys';
+import { resolveShoppingCategory } from '@/lib/services/resolveShoppingCategory';
 import { logActivity } from '@/lib/services/auditLog';
 import { formatShoppingItemRow } from '@/lib/utils/formatters';
 import { logError } from '@/lib/utils/logError';
@@ -136,6 +137,12 @@ export async function POST(request: NextRequest) {
       notes,
     } = validation.data;
 
+    // If the caller didn't specify a category (e.g. "add ingredients to
+    // shopping list" from a recipe), guess one from this household's own
+    // shopping history, then a keyword dictionary — rather than leaving
+    // every such item to land in "Other" for a manual re-sort.
+    const resolvedCategory = await resolveShoppingCategory(name, category);
+
     // Insert the item
     const [newItem] = await db
       .insert(shoppingItems)
@@ -144,7 +151,7 @@ export async function POST(request: NextRequest) {
         name,
         quantity: quantity || null,
         unit: unit || null,
-        category: category || null,
+        category: resolvedCategory,
         recurring: recurring || false,
         recurrenceInterval: recurrenceInterval || null,
         addedBy: addedBy || null,
