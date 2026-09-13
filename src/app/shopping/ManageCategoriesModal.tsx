@@ -53,6 +53,8 @@ export function ManageCategoriesModal({ open, onOpenChange }: ManageCategoriesMo
   const [localCategories, setLocalCategories] = useState<ShoppingCategoryDef[]>(categories);
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [emojiPickerFor, setEmojiPickerFor] = useState<string | null>(null);
+  const [editingNameFor, setEditingNameFor] = useState<string | null>(null);
+  const [editingNameValue, setEditingNameValue] = useState('');
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const { confirm, dialogProps } = useConfirmDialog();
 
@@ -121,6 +123,29 @@ export function ManageCategoriesModal({ open, onOpenChange }: ManageCategoriesMo
       prev.map(c => c.id === categoryId ? { ...c, emoji } : c)
     );
     setEmojiPickerFor(null);
+  };
+
+  const startEditingName = (cat: ShoppingCategoryDef) => {
+    setEditingNameFor(cat.id);
+    setEditingNameValue(cat.name);
+  };
+
+  const commitNameEdit = async (categoryId: string) => {
+    const name = editingNameValue.trim();
+    setEditingNameFor(null);
+    const existing = localCategories.find(c => c.id === categoryId);
+    if (!name || !existing || name === existing.name) return;
+    await updateCategory(categoryId, { name });
+    setLocalCategories(prev =>
+      prev.map(c => c.id === categoryId ? { ...c, name } : c)
+    );
+  };
+
+  const handleColorChange = async (categoryId: string, color: string) => {
+    await updateCategory(categoryId, { color });
+    setLocalCategories(prev =>
+      prev.map(c => c.id === categoryId ? { ...c, color } : c)
+    );
   };
 
   const handleDragStart = (categoryId: string) => {
@@ -214,11 +239,40 @@ export function ManageCategoriesModal({ open, onOpenChange }: ManageCategoriesMo
                       )}
                     </div>
 
-                    <span className="font-medium flex-1 text-sm">{cat.name}</span>
-                    <div
-                      className="w-4 h-4 rounded-full shrink-0 border border-border"
+                    {editingNameFor === cat.id ? (
+                      <Input
+                        autoFocus
+                        value={editingNameValue}
+                        onChange={(e) => setEditingNameValue(e.target.value)}
+                        onBlur={() => commitNameEdit(cat.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') { e.preventDefault(); commitNameEdit(cat.id); }
+                          if (e.key === 'Escape') setEditingNameFor(null);
+                        }}
+                        className="h-7 flex-1 text-sm"
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => startEditingName(cat)}
+                        className="font-medium flex-1 text-sm text-left hover:underline"
+                        title="Click to rename"
+                      >
+                        {cat.name}
+                      </button>
+                    )}
+                    <label
+                      className="relative w-5 h-5 rounded-full shrink-0 border border-border cursor-pointer overflow-hidden"
                       style={{ backgroundColor: cat.color }}
-                    />
+                      title="Change color"
+                    >
+                      <input
+                        type="color"
+                        value={cat.color}
+                        onChange={(e) => handleColorChange(cat.id, e.target.value)}
+                        className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                      />
+                    </label>
                     <Button
                       variant="ghost"
                       size="icon"
