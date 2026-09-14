@@ -1,6 +1,6 @@
 # Archived: fixed-scale "safe-zone" layout preview
 
-**Archived:** 2026-08-02 · **Snapshot of commit:** `ee1c27e`
+**Archived:** 2026-08-02 · **Snapshot of commit:** `ee1c27e` (no longer resolves; predates the history rewrites)
 
 ## What this was
 

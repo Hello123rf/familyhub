@@ -65,7 +65,7 @@ Forward-looking work found in the docs that has **no GitHub issue** — candidat
 
 **Integrations &amp; sync**
 
-- **Resurrect the MCP server** — a working Prism Model Context Protocol server (`.mcp/`, stdio transport, reuses Settings → API Tokens for auth) was built but never merged; re-cut from commit `f870aeb` rather than from scratch. Future direction: a remote/hosted variant (Streamable HTTP + OAuth 2.1). _(`decisions-log.md`)_
+- **Remote MCP server** — the stdio MCP server has since shipped (`.mcp/`, built and smoke-tested in CI). What remains is the remote/hosted variant (Streamable HTTP + OAuth 2.1), which is also what unblocks the voice work. _(`decisions-log.md`)_
 - **Two-way CalDAV calendar write** — Apple / CalDAV calendars are read-only today. _(`features/CALENDAR.md`)_ → now tracked as part of calendar sync ([#171](https://github.com/sandydargoport/prism/issues/171)).
 
 **Features**
