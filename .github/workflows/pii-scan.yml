@@ -6,14 +6,15 @@ name: PII / Secret Scan
 # hostname-in-comment heuristic, and the secret-shape scan on every PR and push
 # to master.
 #
-# Layer 2, the per-maintainer denylist, runs here only if the PRISM_PII_DENYLIST
-# secret is set. Without it only the built-in pattern rules run, which is the
-# weaker half: the denylist is what catches real names, a town, a postal code
-# and a personal hostname, and those are exactly what has leaked before. A fork
-# PR never receives the secret, so those runs fall back to Layer 1 by design.
+# Layer 2, the per-maintainer denylist, runs here as HASHES. The list itself
+# never reaches GitHub: .github/pii-hashes.txt holds HMAC-SHA256 of each entry
+# keyed by PRISM_PII_SALT, so the file is unusable without the salt and the
+# salt is meaningless without the file. Storing the plaintext list as a secret
+# would have put a concentrated index of a real household inside GitHub, which
+# is the opposite of what the list exists to do.
 #
-# scan-pii.sh reports location only (no matched text) when CI is set, so a hit
-# here cannot republish the value into a public Actions log.
+# Matches report file and line only, never the value, so a hit cannot
+# republish into this public log.
 on:
   pull_request:
   push:
@@ -30,26 +31,19 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
-      - name: Materialise the maintainer denylist (if configured)
-        id: denylist
+      - name: Hashed denylist (Layer 2, no plaintext anywhere)
         env:
-          DENYLIST: ${{ secrets.PRISM_PII_DENYLIST }}
+          PRISM_PII_SALT: ${{ secrets.PRISM_PII_SALT }}
         run: |
-          if [ -n "$DENYLIST" ]; then
-            install -m 600 /dev/null "$RUNNER_TEMP/denylist.txt"
-            printf '%s\n' "$DENYLIST" > "$RUNNER_TEMP/denylist.txt"
-            echo "PRISM_PII_DENYLIST=$RUNNER_TEMP/denylist.txt" >> "$GITHUB_ENV"
-            echo "Layer 2 enabled ($(grep -cvE '^\s*(#|$)' "$RUNNER_TEMP/denylist.txt") entries)."
-          else
-            echo "::warning::PRISM_PII_DENYLIST secret not set - running built-in pattern rules only."
+          if [ -z "$PRISM_PII_SALT" ]; then
+            echo "::warning::PRISM_PII_SALT is not set - Layer 2 did not run."
+            exit 0
           fi
+          python3 scripts/pii-hashes.py scan
 
-      - name: PII denylist + pattern rules
+      - name: PII pattern rules (Layer 1)
         run: bash scripts/scan-pii.sh
 
-      - name: Shred the denylist
-        if: always()
-        run: rm -f "$RUNNER_TEMP/denylist.txt"
       - name: Hostname-in-comment heuristic
         run: bash scripts/scan-hostnames.sh
       - name: Secret-shape scan
