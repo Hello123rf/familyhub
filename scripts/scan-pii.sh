@@ -124,7 +124,14 @@ if [ -s "$tmpfile" ]; then
   m=$(printf '%s\n' "$DENYLIST_FILES" | xargs -d '\n' grep -iwn -H -F -I -f "$tmpfile" 2>/dev/null || true)
   if [ -n "$m" ]; then
     echo "[scan-pii] DENYLIST MATCHES:"
-    printf '%s\n' "$m" | sed 's/^/  /'
+    # In CI the log is public. Printing the grep output would republish the very
+    # value the denylist exists to keep out of public text, so report location
+    # only and let the maintainer re-run locally for the detail.
+    if [ -n "${CI:-}" ]; then
+      printf '%s\n' "$m" | cut -d: -f1,2 | sed 's/^/  /;s/$/  (value withheld: run scan-pii.sh locally)/'
+    else
+      printf '%s\n' "$m" | sed 's/^/  /'
+    fi
     echo "[scan-pii] Anonymize the offending values before pushing."
     fail=1
   fi

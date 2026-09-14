@@ -4,8 +4,16 @@ name: PII / Secret Scan
 # be bypassed with --no-verify, CI cannot. Runs the built-in PII pattern rules
 # (maintainer domain, non-allowlisted emails, private/Tailscale IPs), the
 # hostname-in-comment heuristic, and the secret-shape scan on every PR and push
-# to master. The per-maintainer denylist file is absent in CI, which is fine:
-# the built-in rules still run.
+# to master.
+#
+# Layer 2, the per-maintainer denylist, runs here only if the PRISM_PII_DENYLIST
+# secret is set. Without it only the built-in pattern rules run, which is the
+# weaker half: the denylist is what catches real names, a town, a postal code
+# and a personal hostname, and those are exactly what has leaked before. A fork
+# PR never receives the secret, so those runs fall back to Layer 1 by design.
+#
+# scan-pii.sh reports location only (no matched text) when CI is set, so a hit
+# here cannot republish the value into a public Actions log.
 on:
   pull_request:
   push:
@@ -22,8 +30,26 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
+      - name: Materialise the maintainer denylist (if configured)
+        id: denylist
+        env:
+          DENYLIST: ${{ secrets.PRISM_PII_DENYLIST }}
+        run: |
+          if [ -n "$DENYLIST" ]; then
+            install -m 600 /dev/null "$RUNNER_TEMP/denylist.txt"
+            printf '%s\n' "$DENYLIST" > "$RUNNER_TEMP/denylist.txt"
+            echo "PRISM_PII_DENYLIST=$RUNNER_TEMP/denylist.txt" >> "$GITHUB_ENV"
+            echo "Layer 2 enabled ($(grep -cvE '^\s*(#|$)' "$RUNNER_TEMP/denylist.txt") entries)."
+          else
+            echo "::warning::PRISM_PII_DENYLIST secret not set - running built-in pattern rules only."
+          fi
+
       - name: PII denylist + pattern rules
         run: bash scripts/scan-pii.sh
+
+      - name: Shred the denylist
+        if: always()
+        run: rm -f "$RUNNER_TEMP/denylist.txt"
       - name: Hostname-in-comment heuristic
         run: bash scripts/scan-hostnames.sh
       - name: Secret-shape scan
