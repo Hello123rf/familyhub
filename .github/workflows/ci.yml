@@ -361,8 +361,12 @@ jobs:
           path: playwright-report/
           retention-days: 7
 
+      # always(): Playwright exits non-zero when it writes a snapshot that did
+      # not exist, which is exactly what a baseline-generation run does. Without
+      # this the job stops at that failure and the baselines it just produced
+      # are thrown away, so the documented bootstrap path could never complete.
       - name: Upload regenerated Linux baselines
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.update_visual_baselines == true }}
+        if: ${{ always() && github.event_name == 'workflow_dispatch' && inputs.update_visual_baselines == true }}
         uses: actions/upload-artifact@v4
         with:
           name: visual-regression-linux-baselines
