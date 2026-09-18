@@ -92,6 +92,10 @@ function localizeDayName(dayName: string, locale: string): string {
   });
 }
 
+// SunCalc v2 reports solar and lunar altitudes in degrees. Keep the widget's
+// geometry in radians because the SVG scale is defined against π/2 (zenith).
+const altitudeToRadians = (degrees: number): number => degrees * Math.PI / 180;
+
 export interface ForecastDay {
   date: Date;
   dayName: string;
@@ -986,8 +990,8 @@ function SunriseSunsetArc({
     for (let i = 0; i <= STEPS; i++) {
       const frac = i / STEPS;
       const t = new Date(midnightMs + frac * dayMs);
-      const sAlt = SunCalc.getPosition(t, useLat, useLon).altitude;
-      const mAlt = SunCalc.getMoonPosition(t, useLat, useLon).altitude;
+      const sAlt = altitudeToRadians(SunCalc.getPosition(t, useLat, useLon).altitude);
+      const mAlt = altitudeToRadians(SunCalc.getMoonPosition(t, useLat, useLon).altitude);
       sun.push({ frac, alt: sAlt, y: altToY(sAlt) });
       moon.push({ frac, alt: mAlt, y: altToY(mAlt) });
     }
@@ -1030,14 +1034,16 @@ function SunriseSunsetArc({
   // Current positions (uses suncalc directly rather than interpolating
   // samples — accurate to the second instead of the 15-min sample grid).
   const sunPos = SunCalc.getPosition(new Date(nowMs), useLat, useLon);
+  const sunAltitude = altitudeToRadians(sunPos.altitude);
   const sunX = xOf(nowFrac);
-  const sunY = altToY(sunPos.altitude);
-  const isDay = sunPos.altitude >= 0;
+  const sunY = altToY(sunAltitude);
+  const isDay = sunAltitude >= 0;
 
   const moonPos = moonSamples ? SunCalc.getMoonPosition(new Date(nowMs), useLat, useLon) : null;
   const moonX = moonPos ? xOf(nowFrac) : 0;
-  const moonY = moonPos ? altToY(moonPos.altitude) : 0;
-  const isMoonUp = moonPos ? moonPos.altitude >= 0 : false;
+  const moonAltitude = moonPos ? altitudeToRadians(moonPos.altitude) : 0;
+  const moonY = moonPos ? altToY(moonAltitude) : 0;
+  const isMoonUp = moonAltitude >= 0;
 
   // Rise/set fractions, clamped to [0,1] today. Suncalc rises/sets can
   // straddle midnight, in which case we just hide the off-screen tick.
@@ -1057,9 +1063,9 @@ function SunriseSunsetArc({
   // — red near the horizon, amber high in the sky. Bucketed (rather than
   // smoothly interpolated) for legibility against a small dot.
   const sunDotColor = isDay
-    ? sunPos.altitude < 0.087 // ~5°
+    ? sunAltitude < 0.087 // ~5°
       ? SUN_HORIZON
-      : sunPos.altitude < 0.314 // ~18°
+      : sunAltitude < 0.314 // ~18°
         ? SUN_LOW
         : SUN_COLOR
     : '#94A3B8';

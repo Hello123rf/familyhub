@@ -9,6 +9,7 @@
 import React from 'react';
 import { render as rtlRender, screen, type RenderOptions } from '@testing-library/react';
 import { TimeFormatProvider } from '@/components/providers';
+import * as SunCalc from 'suncalc';
 
 // WeatherWidget consumes useTimeFormat(), which requires a TimeFormatProvider
 // ancestor. Wrap every render so the widget mounts the way it does in the app.
@@ -28,6 +29,17 @@ afterAll(() => {
 });
 
 // --- mocks (must precede component import) ---------------------------------
+
+jest.mock('suncalc', () => {
+  const actual = jest.requireActual<typeof import('suncalc')>('suncalc');
+  return {
+    ...actual,
+    getPosition: jest.fn(actual.getPosition),
+    getMoonPosition: jest.fn(actual.getMoonPosition),
+  };
+});
+
+const realSunCalc = jest.requireActual<typeof import('suncalc')>('suncalc');
 
 // Stub WidgetContainer so we don't pull in next/link, Radix UI, etc.
 jest.mock('../WidgetContainer', () => ({
@@ -57,6 +69,12 @@ jest.mock('../WidgetContainer', () => ({
 
 import { WeatherWidget } from '../WeatherWidget';
 import type { WeatherData, ForecastDay, HourlyForecast, WeatherCondition } from '../WeatherWidget';
+
+afterEach(() => {
+  jest.useRealTimers();
+  jest.mocked(SunCalc.getPosition).mockImplementation(realSunCalc.getPosition);
+  jest.mocked(SunCalc.getMoonPosition).mockImplementation(realSunCalc.getMoonPosition);
+});
 
 // ---------------------------------------------------------------------------
 // Test data helpers
@@ -436,5 +454,44 @@ describe('demo data fallback', () => {
     render(<WeatherWidget />);
     expect(screen.queryByText(/Next .* Hours/)).not.toBeNull();
     expect(screen.queryByText('Now')).not.toBeNull();
+  });
+});
+
+
+// ===========================================================================
+// 8. Sun and moon arc geometry
+// ===========================================================================
+
+describe('sun and moon arcs', () => {
+  it('converts SunCalc v2 degree altitudes before plotting the arcs', () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date(2026, 6, 17, 12, 0));
+
+    jest.mocked(SunCalc.getPosition).mockReturnValue({ altitude: 45, azimuth: 0 });
+    jest.mocked(SunCalc.getMoonPosition).mockReturnValue({
+      altitude: -30,
+      azimuth: 0,
+      distance: 384_400,
+      parallacticAngle: 0,
+    });
+
+    const { container } = render(
+      <WeatherWidget
+        data={makeWeatherData({
+          sunrise: new Date(2026, 6, 17, 5, 30),
+          sunset: new Date(2026, 6, 17, 20, 15),
+          moonrise: new Date(2026, 6, 17, 21, 0),
+          moonset: new Date(2026, 6, 18, 5, 0),
+          moonPhase: 0.5,
+        })}
+      />
+    );
+
+    const sunPath = Array.from(container.querySelectorAll('path'))
+      .find((path) => path.getAttribute('stroke')?.startsWith('url(#sun-grad-'));
+
+    // 45° maps halfway from the horizon at 66 to the zenith at 10. Treating
+    // SunCalc v2's degrees as radians would clamp the point to y=10 instead.
+    expect(sunPath?.getAttribute('d')).toContain('38.0');
   });
 });
