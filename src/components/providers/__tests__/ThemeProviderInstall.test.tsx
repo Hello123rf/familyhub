@@ -196,7 +196,7 @@ describe('ThemeProvider — gallery themes', () => {
     await waitFor(() => expect(result.current.palette.id).toBe('prism'));
     await waitFor(() => expect(lastWrite(fetchMock).value.paletteId).toBe('prism'));
     expect(lastWrite(fetchMock).value.installed).toHaveLength(1);
-    expect(result.current.installedThemes).toHaveLength(1);
+    await waitFor(() => expect(result.current.installedThemes).toHaveLength(1));
 
     window.history.replaceState({}, '', '/');
   });
