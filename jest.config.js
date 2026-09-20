@@ -1,6 +1,5 @@
 /** @type {import('jest').Config} */
 module.exports = {
-  preset: 'ts-jest',
   testEnvironment: 'node',
   setupFiles: ['<rootDir>/jest.setup.js'],
   roots: ['<rootDir>/src'],
@@ -10,15 +9,17 @@ module.exports = {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
   testMatch: ['**/__tests__/**/*.test.ts', '**/__tests__/**/*.test.tsx'],
+  // Type-stripping only, same as the old ts-jest config (diagnostics: false) -
+  // actual type-checking is a separate step (npm run type-check). Swapping
+  // to SWC decouples the test transform from TypeScript's compiler API
+  // entirely, which is what unblocks upgrading to TypeScript 7 (ts-jest's
+  // peer range hard-caps at "typescript: >=4.3 <7").
   transform: {
-    '^.+\\.tsx?$': ['ts-jest', {
-      tsconfig: {
-        jsx: 'react-jsx',
-        module: 'commonjs',
-        moduleResolution: 'node',
-        esModuleInterop: true,
+    '^.+\\.tsx?$': ['@swc/jest', {
+      jsc: {
+        parser: { syntax: 'typescript', tsx: true },
+        transform: { react: { runtime: 'automatic' } },
       },
-      diagnostics: false,
     }],
   },
 };

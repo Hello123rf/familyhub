@@ -8,17 +8,25 @@
 import path from 'path';
 
 // --- Mocks ---
-const mockToFile = jest.fn().mockResolvedValue({ width: 1920, height: 1080, size: 500000 });
-const mockResize = jest.fn().mockReturnValue({ toFile: mockToFile });
-const mockRotate = jest.fn().mockReturnValue({
+// var (not const): @swc/jest hoists the jest.mock('sharp', ...) call below
+// above these declarations, and var's hoisted-but-undefined binding avoids
+// the TDZ error a const would throw at that point.
+var mockToFile = jest.fn().mockResolvedValue({ width: 1920, height: 1080, size: 500000 });
+var mockResize = jest.fn().mockReturnValue({ toFile: mockToFile });
+var mockRotate = jest.fn().mockReturnValue({
   metadata: jest.fn().mockResolvedValue({ width: 3000, height: 2000 }),
   resize: mockResize,
   toFile: mockToFile,
 });
 
 jest.mock('sharp', () => {
+  // rotate: (...a) => mockRotate(...a), not rotate: mockRotate directly:
+  // this factory runs (and this object literal evaluates) before the var
+  // assignments above run, once SWC hoists the sharp import ahead of them -
+  // a direct reference would capture the hoisted-but-unassigned undefined.
+  // Wrapping defers the read of mockRotate to actual call time.
   const sharpFn = jest.fn().mockReturnValue({
-    rotate: mockRotate,
+    rotate: (...a: unknown[]) => mockRotate(...a),
   });
   return { __esModule: true, default: sharpFn };
 });

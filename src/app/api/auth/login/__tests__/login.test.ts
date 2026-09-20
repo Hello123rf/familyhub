@@ -44,9 +44,16 @@ jest.mock('@/lib/auth/session', () => ({
 }));
 
 // --- Cookies mock ---
-const mockCookieStore = { set: jest.fn(), get: jest.fn() };
+// var (not const): @swc/jest hoists this jest.mock() call above this
+// declaration, and var's hoisted-but-undefined binding avoids the TDZ
+// error a const would throw at that point.
+var mockCookieStore = { set: jest.fn(), get: jest.fn() };
 jest.mock('next/headers', () => ({
-  cookies: jest.fn().mockResolvedValue(mockCookieStore),
+  // Not .mockResolvedValue(mockCookieStore): that evaluates its argument
+  // immediately, capturing this hoisted-but-not-yet-assigned var as
+  // undefined. Wrapping in a function defers the read until cookies() is
+  // actually called, by which point the var has its real value.
+  cookies: jest.fn(() => Promise.resolve(mockCookieStore)),
 }));
 
 // --- bcrypt mock ---
