@@ -36,7 +36,7 @@ describe('RecipeDetailModal — Add to Shopping List respects checked-off ingred
       <RecipeDetailModal
         recipe={recipe}
         shoppingLists={[{ id: 'list-1', name: 'Grocery' }]}
-        onClose={jest.fn()} onEdit={jest.fn()} onDelete={jest.fn()} onToggleFavorite={jest.fn()}
+        onClose={jest.fn()} onEdit={jest.fn()} onDelete={jest.fn()} onToggleFavorite={jest.fn()} onRate={jest.fn()} onMarkAsMade={jest.fn()}
         onAddToShoppingList={onAddToShoppingList}
       />,
     );
@@ -54,7 +54,7 @@ describe('RecipeDetailModal — Add to Shopping List respects checked-off ingred
       <RecipeDetailModal
         recipe={recipe}
         shoppingLists={[{ id: 'list-1', name: 'Grocery' }]}
-        onClose={jest.fn()} onEdit={jest.fn()} onDelete={jest.fn()} onToggleFavorite={jest.fn()}
+        onClose={jest.fn()} onEdit={jest.fn()} onDelete={jest.fn()} onToggleFavorite={jest.fn()} onRate={jest.fn()} onMarkAsMade={jest.fn()}
         onAddToShoppingList={onAddToShoppingList}
       />,
     );
@@ -78,7 +78,7 @@ describe('RecipeDetailModal — Add to Shopping List respects checked-off ingred
       <RecipeDetailModal
         recipe={recipe}
         shoppingLists={[{ id: 'list-1', name: 'Grocery' }]}
-        onClose={jest.fn()} onEdit={jest.fn()} onDelete={jest.fn()} onToggleFavorite={jest.fn()}
+        onClose={jest.fn()} onEdit={jest.fn()} onDelete={jest.fn()} onToggleFavorite={jest.fn()} onRate={jest.fn()} onMarkAsMade={jest.fn()}
         onAddToShoppingList={onAddToShoppingList}
       />,
     );

@@ -79,7 +79,7 @@ describe('POST /api/recipe-capture', () => {
     mockRequireAuth.mockResolvedValue({ userId: 'u1', role: 'parent', scopes: ['recipe:capture'] });
     mockCapture.mockResolvedValue({
       ok: true,
-      recipe: { id: 'r1', name: 'Pancakes', imageUrl: null, reviewStatus: 'inbox' },
+      recipe: { id: 'r1', name: 'Pancakes', imageUrl: null, reviewStatus: 'saved' },
     });
 
     const res = await POST(makeRequest({ url: 'https://example.com/pancakes' }));
@@ -95,7 +95,7 @@ describe('POST /api/recipe-capture', () => {
     mockRequireRole.mockReturnValue(null); // allowed
     mockCapture.mockResolvedValue({
       ok: true,
-      recipe: { id: 'r2', name: 'Soup', imageUrl: null, reviewStatus: 'inbox' },
+      recipe: { id: 'r2', name: 'Soup', imageUrl: null, reviewStatus: 'saved' },
     });
 
     const res = await POST(makeRequest({ url: 'https://example.com/soup' }));

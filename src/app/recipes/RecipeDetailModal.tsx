@@ -14,10 +14,13 @@ import {
   ChevronDown,
   Maximize2,
   Minimize2,
+  Star,
+  ChefHat,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { scaleIngredientText } from '@/lib/utils/scaleIngredient';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -35,6 +38,8 @@ export interface RecipeDetailModalProps {
   onEdit: () => void;
   onDelete: () => void;
   onToggleFavorite: () => void;
+  onRate: (rating: number | null) => void;
+  onMarkAsMade: () => void;
   onAddToShoppingList: (listId: string, ingredients: Array<{ text: string }>) => Promise<void>;
 }
 
@@ -45,6 +50,8 @@ export function RecipeDetailModal({
   onEdit,
   onDelete,
   onToggleFavorite,
+  onRate,
+  onMarkAsMade,
   onAddToShoppingList,
 }: RecipeDetailModalProps) {
   const [desiredServings, setDesiredServings] = useState(recipe.servings || 1);
@@ -119,7 +126,10 @@ export function RecipeDetailModal({
       )}>
         <DialogHeader>
           <div className="flex items-start justify-between pr-8">
-            <DialogTitle className="text-xl">{recipe.name}</DialogTitle>
+            <div className="flex items-center gap-2 min-w-0">
+              <DialogTitle className="text-xl">{recipe.name}</DialogTitle>
+              {recipe.timesMade === 0 && <Badge className="shrink-0">New</Badge>}
+            </div>
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setIsMaximized(!isMaximized)}
@@ -147,6 +157,28 @@ export function RecipeDetailModal({
                 />
               </button>
             </div>
+          </div>
+          <div className="flex items-center gap-0.5 mt-1" role="radiogroup" aria-label="Rating">
+            {[1, 2, 3, 4, 5].map((star) => (
+              <button
+                key={star}
+                type="button"
+                role="radio"
+                aria-checked={recipe.rating === star}
+                onClick={() => onRate(recipe.rating === star ? null : star)}
+                className="p-0.5"
+                title={`Rate ${star} star${star > 1 ? 's' : ''}`}
+              >
+                <Star
+                  className={cn(
+                    'h-4 w-4 transition-colors',
+                    recipe.rating && star <= recipe.rating
+                      ? 'fill-yellow-400 text-yellow-400'
+                      : 'text-muted-foreground hover:text-yellow-400'
+                  )}
+                />
+              </button>
+            ))}
           </div>
         </DialogHeader>
 
@@ -243,6 +275,10 @@ export function RecipeDetailModal({
                 {recipe.timesMade} time{recipe.timesMade !== 1 ? 's' : ''}
               </div>
             )}
+            <Button variant="outline" size="sm" className="h-7 text-xs" onClick={onMarkAsMade}>
+              <ChefHat className="h-3 w-3 mr-1" />
+              Mark as Cooked
+            </Button>
           </div>
 
           {recipe.ingredients && recipe.ingredients.length > 0 && (

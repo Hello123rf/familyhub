@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { Heart, Clock, Users, Check } from 'lucide-react';
+import { Heart, Clock, Users, Check, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -32,7 +32,12 @@ export function RecipeCard({ recipe, onClick, onToggleFavorite }: RecipeCardProp
       )}
       <CardContent className={cn('p-4', !recipe.imageUrl && 'pt-4')}>
         <div className="flex items-start justify-between gap-2">
-          <h3 className="font-semibold line-clamp-2">{recipe.name}</h3>
+          <div className="flex items-center gap-1.5 min-w-0">
+            <h3 className="font-semibold line-clamp-2">{recipe.name}</h3>
+            {recipe.timesMade === 0 && (
+              <Badge className="shrink-0 text-[10px] px-1.5 py-0">New</Badge>
+            )}
+          </div>
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -59,6 +64,12 @@ export function RecipeCard({ recipe, onClick, onToggleFavorite }: RecipeCardProp
         )}
 
         <div className="flex items-center gap-3 mt-3 text-xs text-muted-foreground">
+          {recipe.rating && (
+            <span className="flex items-center gap-1 text-yellow-500">
+              <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+              {recipe.rating}
+            </span>
+          )}
           {(recipe.prepTime || recipe.cookTime) && (
             <span className="flex items-center gap-1">
               <Clock className="h-3 w-3" />

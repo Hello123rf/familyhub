@@ -68,18 +68,18 @@ describe('captureRecipeFromUrl', () => {
     expect(mockParseRecipeFromUrl).toHaveBeenCalledWith('https://example.com/pancakes');
   });
 
-  it('persists the captured recipe into the Inbox (reviewStatus: inbox, sourceType: lan_capture)', async () => {
+  it('persists the captured recipe directly into the main list (reviewStatus: saved, sourceType: lan_capture)', async () => {
     mockParseRecipeFromUrl.mockResolvedValue({
       name: 'Pancakes', url: 'https://example.com/pancakes', ingredients: [{ text: '2 eggs' }],
     });
-    mockInsertReturning.mockResolvedValue([{ id: 'r1', name: 'Pancakes', imageUrl: null, reviewStatus: 'inbox' }]);
+    mockInsertReturning.mockResolvedValue([{ id: 'r1', name: 'Pancakes', imageUrl: null, reviewStatus: 'saved' }]);
 
     const result = await captureRecipeFromUrl('https://example.com/pancakes', 'user-1');
 
     expect(mockInsertValues).toHaveBeenCalledWith(
-      expect.objectContaining({ reviewStatus: 'inbox', sourceType: 'lan_capture', createdBy: 'user-1' }),
+      expect.objectContaining({ reviewStatus: 'saved', sourceType: 'lan_capture', createdBy: 'user-1' }),
     );
-    expect(result).toEqual({ ok: true, recipe: { id: 'r1', name: 'Pancakes', imageUrl: null, reviewStatus: 'inbox' } });
+    expect(result).toEqual({ ok: true, recipe: { id: 'r1', name: 'Pancakes', imageUrl: null, reviewStatus: 'saved' } });
   });
 
   it('allows createdBy: null for token-authenticated captures with no session', async () => {

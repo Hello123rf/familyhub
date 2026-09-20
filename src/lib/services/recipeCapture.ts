@@ -1,7 +1,10 @@
 /**
- * Shared "capture a recipe URL into the Inbox" logic, used by both:
+ * Shared "capture a recipe URL and save it" logic, used by both:
  *   - POST /api/recipe-capture (LAN Shortcut, API-token authenticated)
  *   - POST /recipe-capture's page action (laptop bookmarklet flow, session authenticated)
+ *
+ * Saves straight into the main recipe list (reviewStatus: 'saved'), same as
+ * a manual "Import from URL" - no separate review/inbox step.
  *
  * Deliberately thin: it reuses parseRecipeFromUrl (the same parser
  * /api/recipes/import-url uses) and validatePublicUrl (the same SSRF guard) —
@@ -32,7 +35,7 @@ async function insertInboxRecipe(
       description: parsed.description || null,
       url: parsed.url,
       sourceType: 'lan_capture',
-      reviewStatus: 'inbox',
+      reviewStatus: 'saved',
       ingredients: parsed.ingredients,
       instructions: parsed.instructions || null,
       prepTime: parsed.prepTime || null,

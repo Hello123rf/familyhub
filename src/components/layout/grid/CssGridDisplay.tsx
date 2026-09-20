@@ -74,9 +74,21 @@ export function CssGridDisplay({
   // design on a tall screen or vice-versa) would be a ~2× skew, so it letterboxes
   // to preserve proportions. `designOrientation` is kept only as a fallback for
   // an empty/degenerate layout.
-  const designWide = fitCols !== fitRows
-    ? fitCols > fitRows
-    : (designOrientation ? designOrientation === 'landscape' : true);
+  // A strict fitCols > fitRows check is too eager to call something
+  // "portrait-shaped": an organically-arranged landscape dashboard (widgets
+  // stacked deep in a couple of columns) can easily end up with a content
+  // box that's a little taller than wide (e.g. 27 cols x 30 rows) without
+  // actually being a portrait design. Only treat the shape as unambiguous
+  // when it's ANOTHER "genuine" mismatch (>4:3 the other way) - a merely
+  // near-square box just goes along with whatever the screen is, so it
+  // still stretches instead of getting force-letterboxed into a narrow
+  // pillarboxed column on an ordinary wide screen.
+  const designAspect = fitCols / fitRows;
+  const designWide = designAspect > 4 / 3
+    ? true
+    : designAspect < 3 / 4
+      ? false
+      : (designOrientation ? designOrientation === 'landscape' : true);
   const screenWide = viewportWidth >= viewportHeight;
   const sameOrientation = designWide === screenWide;
   // containMode always scales-to-fit (screensaver — sparse ambient layout that

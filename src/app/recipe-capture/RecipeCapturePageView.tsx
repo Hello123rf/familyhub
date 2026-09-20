@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Inbox, Link2, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { BookmarkPlus, Link2, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/components/providers';
@@ -55,7 +55,7 @@ export function RecipeCapturePageView() {
       <Card className="w-full max-w-md">
         <CardContent className="p-6 space-y-4">
           <div className="flex items-center gap-2 text-lg font-semibold">
-            <Inbox className="h-5 w-5 text-primary" />
+            <BookmarkPlus className="h-5 w-5 text-primary" />
             Save recipe to FamilyHub
           </div>
 
@@ -73,7 +73,7 @@ export function RecipeCapturePageView() {
 
               {status === 'idle' && (
                 <Button className="w-full" onClick={handleCapture}>
-                  Save to Recipe Inbox
+                  Save Recipe
                 </Button>
               )}
 
@@ -86,10 +86,10 @@ export function RecipeCapturePageView() {
               {status === 'done' && (
                 <div className="space-y-3">
                   <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
-                    <CheckCircle2 className="h-4 w-4" />Saved to your Recipe Inbox
+                    <CheckCircle2 className="h-4 w-4" />Saved to your recipes
                   </div>
                   <Button asChild variant="outline" className="w-full">
-                    <Link href="/recipes">Review in Recipe Inbox</Link>
+                    <Link href="/recipes">View Recipes</Link>
                   </Button>
                 </div>
               )}

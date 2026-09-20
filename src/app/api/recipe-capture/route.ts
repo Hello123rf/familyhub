@@ -4,8 +4,8 @@
  * LAN-first recipe capture: an Apple Shortcut (Share Sheet -> Get Contents
  * of URL) POSTs a page URL here with a narrowly-scoped API token
  * (scope 'recipe:capture', minted in Settings -> Security -> API Tokens).
- * The recipe lands in the Recipe Inbox for review, exactly like a URL
- * pasted into the in-app "Import from URL" flow, via the same parser
+ * The recipe is saved directly into the main recipe list, exactly like a
+ * URL pasted into the in-app "Import from URL" flow, via the same parser
  * (see src/lib/services/recipeCapture.ts).
  *
  * Also accepts a normal Prism session (for the laptop bookmarklet flow,

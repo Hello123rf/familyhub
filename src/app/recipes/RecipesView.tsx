@@ -50,7 +50,7 @@ export function RecipesView() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [paramHandled, setParamHandled] = useState(false);
 
-  const { recipes, loading, error, deleteRecipe, toggleFavorite, importFromUrl, importFromPaprika, createRecipe, updateRecipe, refresh } = useRecipes({
+  const { recipes, loading, error, deleteRecipe, toggleFavorite, markAsMade, importFromUrl, importFromPaprika, createRecipe, updateRecipe, refresh } = useRecipes({
     favorite: viewMode === 'favorites' ? true : undefined,
   });
 
@@ -90,6 +90,7 @@ export function RecipesView() {
     search, setSearch,
     filterCuisine, setFilterCuisine,
     filterCategory, setFilterCategory,
+    sortBy, setSortBy,
     cuisines, categories, filteredRecipes,
     clearFilters, hasActiveFilters,
   } = useRecipesFilters(recipes);
@@ -227,6 +228,18 @@ export function RecipesView() {
               onSelectionChange={s => setFilterCategory(s.size > 0 ? [...s][0]! : null)}
               mode="single" />
           )}
+          <div className="w-px h-5 bg-border shrink-0" />
+          <select
+            value={sortBy}
+            onChange={e => setSortBy(e.target.value as typeof sortBy)}
+            className="h-8 shrink-0 border border-border rounded-md px-2 text-sm bg-background"
+            aria-label="Sort recipes by"
+          >
+            <option value="name">Name (A-Z)</option>
+            <option value="rating">Rating</option>
+            <option value="lastMade">Last Cooked</option>
+            <option value="category">Main Ingredient / Category</option>
+          </select>
           {hasActiveFilters && (
             <Button variant="ghost" size="sm" onClick={clearFilters}
               className="shrink-0 text-muted-foreground h-8">
@@ -287,6 +300,8 @@ export function RecipesView() {
           onEdit={() => setShowEditModal(true)}
           onDelete={() => handleDelete(selectedRecipe)}
           onToggleFavorite={() => toggleFavorite(selectedRecipe.id)}
+          onRate={(rating) => updateRecipe(selectedRecipe.id, { rating })}
+          onMarkAsMade={() => markAsMade(selectedRecipe.id)}
           onAddToShoppingList={async (listId, ingredients) => {
             for (const ing of ingredients) await addShoppingItem(listId, { name: ing.text });
           }}
