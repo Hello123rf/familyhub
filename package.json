@@ -134,7 +134,7 @@
     "eslint-config-next": "^16.3.4",
     "husky": "^9.1.7",
     "jest": "^30.5.2",
-    "jest-environment-jsdom": "^30.5.1",
+    "jest-environment-jsdom": "^30.5.2",
     "postcss": "^8.5.28",
     "prettier": "^3.9.6",
     "prettier-plugin-tailwindcss": "^0.8.1",
@@ -148,6 +148,8 @@
   "overrides": {
     "@emoji-mart/react": {
       "react": "$react"
-    }
+    },
+    "browserslist": "^4.28.9",
+    "esbuild": "^0.25.12"
   }
 }
