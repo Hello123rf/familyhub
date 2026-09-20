@@ -96,7 +96,7 @@ describe('POST /api/recipes/import-url', () => {
     const data = await res.json();
 
     expect(res.status).toBe(400);
-    expect(data.error).toContain('private or internal');
+    expect(data.error).toContain('not parseable');
   });
 
   it('returns 400 for non-HTTP URL', async () => {
@@ -104,7 +104,7 @@ describe('POST /api/recipes/import-url', () => {
     const data = await res.json();
 
     expect(res.status).toBe(400);
-    expect(data.error).toContain('private or internal');
+    expect(data.error).toContain('not allowed; use http or https');
   });
 
   it('returns 400 for localhost URL (SSRF protection)', async () => {

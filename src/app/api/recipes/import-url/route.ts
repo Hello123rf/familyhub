@@ -4,7 +4,7 @@ import { recipes } from '@/lib/db/schema';
 import { requireAuth, requireRole } from '@/lib/auth';
 import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { parseRecipeFromUrl } from '@/lib/utils/recipeParser';
-import { isPrivateUrl } from '@/lib/utils/urlSafety';
+import { validatePublicUrl, UnsafeUrlError } from '@/lib/utils/safeFetch';
 import { logError } from '@/lib/utils/logError';
 
 export async function POST(request: NextRequest) {
@@ -29,11 +29,13 @@ export async function POST(request: NextRequest) {
     }
 
     // SSRF protection: block private/internal URLs
-    if (isPrivateUrl(body.url)) {
-      return NextResponse.json(
-        { error: 'URLs pointing to private or internal networks are not allowed' },
-        { status: 400 }
-      );
+    try {
+      validatePublicUrl(body.url, { isProduction: true });
+    } catch (err) {
+      if (err instanceof UnsafeUrlError) {
+        return NextResponse.json({ error: err.message }, { status: 400 });
+      }
+      throw err;
     }
 
     // Parse recipe from URL

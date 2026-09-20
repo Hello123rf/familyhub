@@ -4,13 +4,13 @@
  *   - POST /recipe-capture's page action (laptop bookmarklet flow, session authenticated)
  *
  * Deliberately thin: it reuses parseRecipeFromUrl (the same parser
- * /api/recipes/import-url uses) and isPrivateUrl (the same SSRF guard) —
+ * /api/recipes/import-url uses) and validatePublicUrl (the same SSRF guard) —
  * no second parser, no second validation logic.
  */
 
 import { db } from '@/lib/db/client';
 import { recipes } from '@/lib/db/schema';
-import { isPrivateUrl } from '@/lib/utils/urlSafety';
+import { validatePublicUrl, UnsafeUrlError } from '@/lib/utils/safeFetch';
 import { parseRecipeFromUrl } from '@/lib/utils/recipeParser';
 import { invalidateEntity } from '@/lib/cache/cacheKeys';
 
@@ -62,8 +62,13 @@ export async function captureRecipeFromUrl(
     return { ok: false, status: 400, error: 'URL is required' };
   }
 
-  if (isPrivateUrl(url)) {
-    return { ok: false, status: 400, error: 'URLs pointing to private or internal networks are not allowed' };
+  try {
+    validatePublicUrl(url, { isProduction: true });
+  } catch (err) {
+    if (err instanceof UnsafeUrlError) {
+      return { ok: false, status: 400, error: err.message };
+    }
+    throw err;
   }
 
   let parsed;
