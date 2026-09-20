@@ -783,10 +783,18 @@ function CalendarHoursCard() {
         <CardTitle>Calendar Hours</CardTitle>
         <CardDescription>
           Hide a time range from day and week calendar views. When hidden, the remaining hours
-          auto-resize to fill the available space. Toggle visibility with the clock button in calendar views.
+          auto-resize to fill the available space. You can also toggle this with the clock button in calendar views.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-muted-foreground">Hide time block</span>
+          <Switch
+            checked={settings.enabled}
+            onCheckedChange={(checked) => setSettings({ enabled: checked })}
+          />
+        </div>
+
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <span className="text-sm text-muted-foreground">Mode</span>
           <select
