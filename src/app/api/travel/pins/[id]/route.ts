@@ -66,7 +66,7 @@ const updatePinSchema = z.object({
   nationalParks: z.array(z.string()).optional(),
   pinType: z.enum(['location', 'stop', 'national_park']).optional(),
   photoRadiusKm: z.number().min(0).max(500).optional(),
-  tripId: z.string().uuid().nullable().optional(),
+  tripId: z.string().guid().nullable().optional(),
   isHub: z.boolean().optional(),
   sortOrder: z.number().int().optional(),
 });

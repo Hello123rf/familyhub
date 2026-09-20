@@ -8,7 +8,10 @@ import { DAYS_OF_WEEK } from '@/lib/constants/days';
 
 // COMMON SCHEMAS
 
-export const uuidSchema = z.string().uuid();
+// guid() (not uuid()) deliberately skips zod v4's RFC 9562 version/variant
+// nibble check - this schema also validates DB-generated IDs from older data
+// and test fixtures that predate that check, not just crypto.randomUUID() output.
+export const uuidSchema = z.string().guid();
 export const hexColorSchema = z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Invalid hex color');
 export const isoDateSchema = z.string().datetime();
 
@@ -379,7 +382,7 @@ const widgetConfigSchema = z.object({
   gridLineOpacity: z.number().min(0).max(1).optional(),
   cellBackgroundColor: z.string().optional(),
   cellBackgroundOpacity: z.number().min(0).max(1).optional(),
-  settings: z.record(z.unknown()).optional(),
+  settings: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const createLayoutSchema = z.object({

@@ -111,7 +111,7 @@ export async function POST(req: Request) {
       { status: 201 }
     );
   } catch (err) {
-    if (err instanceof z.ZodError) return NextResponse.json({ error: err.errors }, { status: 400 });
+    if (err instanceof z.ZodError) return NextResponse.json({ error: err.issues }, { status: 400 });
     logError('POST /api/weekend/places', err);
     return NextResponse.json({ error: 'Failed to create place' }, { status: 500 });
   }
