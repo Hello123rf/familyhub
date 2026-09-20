@@ -89,7 +89,7 @@ export function KioskSection() {
       <div>
         <h2 className="text-2xl font-bold">Kindle Kiosk</h2>
         <p className="text-muted-foreground mt-1">
-          Generate a link for each child's e-ink Kindle. Open the URL in the Kindle browser and
+          Generate a link for each child&apos;s e-ink Kindle. Open the URL in the Kindle browser and
           bookmark it — the child can check off their daily chores without logging in.
         </p>
       </div>

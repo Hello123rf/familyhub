@@ -11,6 +11,7 @@ import path from 'path';
 // var (not const): @swc/jest hoists the jest.mock('sharp', ...) call below
 // above these declarations, and var's hoisted-but-undefined binding avoids
 // the TDZ error a const would throw at that point.
+/* eslint-disable no-var */
 var mockToFile = jest.fn().mockResolvedValue({ width: 1920, height: 1080, size: 500000 });
 var mockResize = jest.fn().mockReturnValue({ toFile: mockToFile });
 var mockRotate = jest.fn().mockReturnValue({
@@ -18,6 +19,7 @@ var mockRotate = jest.fn().mockReturnValue({
   resize: mockResize,
   toFile: mockToFile,
 });
+/* eslint-enable no-var */
 
 jest.mock('sharp', () => {
   // rotate: (...a) => mockRotate(...a), not rotate: mockRotate directly:

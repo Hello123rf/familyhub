@@ -61,7 +61,7 @@ export function RecipeCapturePageView() {
 
           {!url ? (
             <p className="text-sm text-muted-foreground">
-              No page URL was provided. Use the "Save to FamilyHub" bookmarklet
+              No page URL was provided. Use the &quot;Save to FamilyHub&quot; bookmarklet
               from a recipe page — see Settings for setup instructions.
             </p>
           ) : (

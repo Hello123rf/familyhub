@@ -825,7 +825,7 @@ function ThisDeviceCard() {
         <CardTitle>This Device</CardTitle>
         <CardDescription>
           Visiting a named dashboard (e.g. /d/tv) remembers it on this browser -
-          "/" then goes straight back to it instead of the family default.
+          the home page then goes straight back to it instead of the family default.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">

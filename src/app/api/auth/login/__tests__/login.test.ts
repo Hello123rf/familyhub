@@ -47,6 +47,7 @@ jest.mock('@/lib/auth/session', () => ({
 // var (not const): @swc/jest hoists this jest.mock() call above this
 // declaration, and var's hoisted-but-undefined binding avoids the TDZ
 // error a const would throw at that point.
+// eslint-disable-next-line no-var
 var mockCookieStore = { set: jest.fn(), get: jest.fn() };
 jest.mock('next/headers', () => ({
   // Not .mockResolvedValue(mockCookieStore): that evaluates its argument
