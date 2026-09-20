@@ -21,6 +21,7 @@ import { useIdleLogoutSetting, IDLE_LOGOUT_OPTIONS } from '@/lib/hooks/useIdleLo
 import { useAutoHideUI } from '@/lib/hooks/useAutoHideUI';
 import { useAwayModeTimeout } from '@/lib/hooks/useAwayModeTimeout';
 import { usePerformanceMode } from '@/lib/hooks/usePerformanceMode';
+import { getRememberedDashboardSlug, forgetDashboardSlug } from '@/lib/utils/deviceDashboard';
 
 function getCurrentMonthNum(): number {
   return new Date().getMonth() + 1;
@@ -262,6 +263,8 @@ export function DisplaySection() {
       <PerformanceModeCard />
 
       <OrientationCard />
+
+      <ThisDeviceCard />
 
       <WallpaperSettingsCard />
 
@@ -797,6 +800,43 @@ function WallpaperSettingsCard() {
               />
             </div>
           </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ThisDeviceCard() {
+  const [slug, setSlug] = useState<string | null>(null);
+
+  useEffect(() => {
+    setSlug(getRememberedDashboardSlug());
+  }, []);
+
+  const handleReset = () => {
+    forgetDashboardSlug();
+    setSlug(null);
+    window.location.href = '/';
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>This Device</CardTitle>
+        <CardDescription>
+          Visiting a named dashboard (e.g. /d/tv) remembers it on this browser -
+          "/" then goes straight back to it instead of the family default.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-muted-foreground">Showing:</span>
+          <span className="text-sm font-medium">{slug ? `/d/${slug}` : 'Family default'}</span>
+        </div>
+        {slug && (
+          <Button variant="outline" size="sm" onClick={handleReset}>
+            Reset This Device to Family Default
+          </Button>
         )}
       </CardContent>
     </Card>

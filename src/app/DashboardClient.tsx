@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
+import { getRememberedDashboardSlug } from '@/lib/utils/deviceDashboard';
 
 const Dashboard = dynamic(
   () => import('@/components/dashboard').then(mod => ({ default: mod.Dashboard })),
@@ -14,6 +15,15 @@ export function DashboardClient() {
   const [checked, setChecked] = useState(false);
 
   useEffect(() => {
+    // This device previously visited a named dashboard (/d/[slug]) - send it
+    // straight back there instead of the family default. Per-browser, via a
+    // plain cookie, not tied to which family member is signed in.
+    const rememberedSlug = getRememberedDashboardSlug();
+    if (rememberedSlug) {
+      router.replace(`/d/${rememberedSlug}`);
+      return;
+    }
+
     // Check setup status on first load; redirect to wizard if not complete
     fetch('/api/setup/status')
       .then((r) => r.json())
