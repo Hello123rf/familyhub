@@ -51,5 +51,8 @@ export async function register() {
 
     const { startAutoShoppingSyncCron } = await import('./lib/server/autoShoppingSyncCron');
     startAutoShoppingSyncCron();
+
+    const { startTaskSyncCron } = await import('./lib/server/taskSyncCron');
+    startTaskSyncCron();
   }
 }
