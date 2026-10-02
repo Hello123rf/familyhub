@@ -6,6 +6,9 @@
 
 export { useCalendarEvents, useCalendarSources } from './useCalendarEvents';
 export { useWeather } from './useWeather';
+export { useWeatherAlerts } from './useWeatherAlerts';
+export { useRadarFrames } from './useRadarFrames';
+export { useForecastRadarFrames } from './useForecastRadarFrames';
 export { useMessages } from './useMessages';
 export { useTasks } from './useTasks';
 export { useChores } from './useChores';
