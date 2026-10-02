@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { toast } from '@/components/ui/use-toast';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -40,7 +40,7 @@ export function RecipesView() {
   const searchParams = useSearchParams();
 
   const [viewMode, setViewMode] = useState<ViewMode>('all');
-  const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
+  const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showImportUrlModal, setShowImportUrlModal] = useState(false);
   const [showImportPaprikaModal, setShowImportPaprikaModal] = useState(false);
@@ -97,19 +97,21 @@ export function RecipesView() {
 
   const { lists: shoppingLists, addItem: addShoppingItem } = useShoppingLists();
 
-  // Keep selectedRecipe in sync (for favorite toggle, etc.)
-  useEffect(() => {
-    if (!selectedRecipe) return;
-    const updated = recipes.find(r => r.id === selectedRecipe.id);
-    if (updated && updated.isFavorite !== selectedRecipe.isFavorite) setSelectedRecipe(updated);
-  }, [recipes, selectedRecipe]);
+  // Derived live from `recipes`, not a disconnected snapshot - a plain
+  // `useState<Recipe>` went stale after any edit made while the modal was
+  // open (rating, mark-as-cooked, ...) except isFavorite, which had its own
+  // narrow re-sync effect. Deriving by id can never go stale for any field.
+  const selectedRecipe = useMemo(
+    () => (selectedRecipeId ? recipes.find(r => r.id === selectedRecipeId) ?? null : null),
+    [recipes, selectedRecipeId],
+  );
 
   // Auto-open recipe from ?recipe=<id> search param (e.g. linked from meals page)
   const recipeParam = searchParams.get('recipe');
   useEffect(() => {
     if (recipeParam && recipes.length > 0 && !paramHandled) {
       const match = recipes.find(r => r.id === recipeParam);
-      if (match) setSelectedRecipe(match);
+      if (match) setSelectedRecipeId(match.id);
       setParamHandled(true);
     }
   }, [recipeParam, recipes, paramHandled]);
@@ -118,7 +120,7 @@ export function RecipesView() {
     if (!await confirm(`Delete "${recipe.name}"?`, 'This cannot be undone.')) return;
     try {
       await deleteRecipe(recipe.id);
-      setSelectedRecipe(null);
+      setSelectedRecipeId(null);
     } catch {
       toast({ title: 'Failed to delete recipe', variant: 'destructive' });
     }
@@ -284,7 +286,7 @@ export function RecipesView() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {filteredRecipes.map(recipe => (
                 <RecipeCard key={recipe.id} recipe={recipe}
-                  onClick={() => setSelectedRecipe(recipe)}
+                  onClick={() => setSelectedRecipeId(recipe.id)}
                   onToggleFavorite={() => toggleFavorite(recipe.id)} />
               ))}
             </div>
@@ -296,7 +298,7 @@ export function RecipesView() {
         <RecipeDetailModal
           recipe={selectedRecipe}
           shoppingLists={shoppingLists.map(l => ({ id: l.id, name: l.name }))}
-          onClose={() => setSelectedRecipe(null)}
+          onClose={() => setSelectedRecipeId(null)}
           onEdit={() => setShowEditModal(true)}
           onDelete={() => handleDelete(selectedRecipe)}
           onToggleFavorite={() => toggleFavorite(selectedRecipe.id)}
@@ -342,7 +344,7 @@ export function RecipesView() {
 
       {showEditModal && selectedRecipe && (
         <RecipeFormModal recipe={selectedRecipe} onClose={() => setShowEditModal(false)}
-          onSave={async data => { await updateRecipe(selectedRecipe.id, data); setShowEditModal(false); setSelectedRecipe(null); }} />
+          onSave={async data => { await updateRecipe(selectedRecipe.id, data); setShowEditModal(false); setSelectedRecipeId(null); }} />
       )}
 
       {showImportUrlModal && (
