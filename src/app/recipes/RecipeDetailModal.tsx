@@ -30,6 +30,7 @@ import {
 } from '@/components/ui/dialog';
 import type { Recipe } from '@/lib/hooks/useRecipes';
 import { AddToMealPlanSection } from './AddToMealPlanSection';
+import { useAuth, useFamily } from '@/components/providers';
 
 export interface RecipeDetailModalProps {
   recipe: Recipe;
@@ -59,6 +60,9 @@ export function RecipeDetailModal({
   const [addingToList, setAddingToList] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
   const [checkedIngredients, setCheckedIngredients] = useState<Set<number>>(new Set());
+  const { activeUser } = useAuth();
+  const { members } = useFamily();
+  const raters = members.filter((m) => m.includeInMealRatings);
 
   const handleClose = () => {
     setCheckedIngredients(new Set());
@@ -158,28 +162,48 @@ export function RecipeDetailModal({
               </button>
             </div>
           </div>
-          <div className="flex items-center gap-0.5 mt-1" role="radiogroup" aria-label="Rating">
-            {[1, 2, 3, 4, 5].map((star) => (
-              <button
-                key={star}
-                type="button"
-                role="radio"
-                aria-checked={recipe.rating === star}
-                onClick={() => onRate(recipe.rating === star ? null : star)}
-                className="p-0.5"
-                title={`Rate ${star} star${star > 1 ? 's' : ''}`}
-              >
-                <Star
-                  className={cn(
-                    'h-4 w-4 transition-colors',
-                    recipe.rating && star <= recipe.rating
-                      ? 'fill-yellow-400 text-yellow-400'
-                      : 'text-muted-foreground hover:text-yellow-400'
-                  )}
-                />
-              </button>
-            ))}
-          </div>
+          {raters.length > 0 && (
+            <div className="space-y-1 mt-1">
+              {raters.map((member) => {
+                const isMe = member.id === activeUser?.id;
+                const myRating = recipe.ratings?.find((r) => r.userId === member.id)?.rating ?? null;
+                return (
+                  <div key={member.id} className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground w-16 truncate" style={{ color: member.color }}>
+                      {member.name}
+                    </span>
+                    <div
+                      className="flex items-center gap-0.5"
+                      role={isMe ? 'radiogroup' : undefined}
+                      aria-label={isMe ? 'Your rating' : `${member.name}'s rating`}
+                    >
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          role={isMe ? 'radio' : undefined}
+                          aria-checked={isMe ? myRating === star : undefined}
+                          disabled={!isMe}
+                          onClick={isMe ? () => onRate(myRating === star ? null : star) : undefined}
+                          className={cn('p-0.5', !isMe && 'cursor-default')}
+                          title={isMe ? `Rate ${star} star${star > 1 ? 's' : ''}` : undefined}
+                        >
+                          <Star
+                            className={cn(
+                              'h-4 w-4 transition-colors',
+                              myRating && star <= myRating
+                                ? 'fill-yellow-400 text-yellow-400'
+                                : cn('text-muted-foreground', isMe && 'hover:text-yellow-400')
+                            )}
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </DialogHeader>
 
         {recipe.imageUrl && (

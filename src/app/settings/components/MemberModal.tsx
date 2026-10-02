@@ -7,6 +7,7 @@ import { Upload, Trash2, Smile } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import { UserAvatar } from '@/components/ui/avatar';
 import {
   Dialog,
@@ -34,6 +35,7 @@ export interface MemberModalSaveData {
   avatarUrl?: string | null;
   avatarFile?: File | null;
   pinLength: number;
+  includeInMealRatings?: boolean;
 }
 
 export function MemberModal({
@@ -53,6 +55,7 @@ export function MemberModal({
   // them. Each member's own choice is the source of truth; there is no
   // family-wide default any more.
   const [pinLength, setPinLength] = useState(member?.pinLength ?? DEFAULT_PIN_LENGTH);
+  const [includeInMealRatings, setIncludeInMealRatings] = useState(member?.includeInMealRatings ?? false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(member?.avatarUrl || null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -121,6 +124,7 @@ export function MemberModal({
       avatarUrl: avatarFile ? null : avatarUrl,
       avatarFile,
       pinLength,
+      includeInMealRatings,
     });
   };
 
@@ -269,6 +273,18 @@ export function MemberModal({
               How many digits {member ? `${name || 'this member'}'s` : "this member's"} PIN pad will require.
             </p>
           </div>
+
+          {member && (
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <label className="text-sm font-medium">Include in meal ratings</label>
+                <p className="text-xs text-muted-foreground">
+                  Gives {name || 'this member'} their own star rating row on each recipe.
+                </p>
+              </div>
+              <Switch checked={includeInMealRatings} onCheckedChange={setIncludeInMealRatings} />
+            </div>
+          )}
 
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={onClose}>

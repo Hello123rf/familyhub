@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db/client';
-import { recipes, users } from '@/lib/db/schema';
-import { eq, desc, ilike, or, sql, ne } from 'drizzle-orm';
+import { recipes, users, recipeRatings } from '@/lib/db/schema';
+import { eq, desc, ilike, or, sql, ne, inArray } from 'drizzle-orm';
 import { requireAuth, requireRole, getDisplayAuth } from '@/lib/auth';
 import { getCached } from '@/lib/cache/redis';
 import { invalidateEntity } from '@/lib/cache/cacheKeys';
@@ -104,8 +104,35 @@ async function fetchRecipes(
   const countResult = await countQuery;
   const totalCount = countResult[0]?.count ?? 0;
 
+  // Per-person rating breakdown, batched for the whole page rather than one
+  // query per recipe. Grouped client-side here since recipeList is already
+  // small (a page of recipes), not worth a more complex aggregate query.
+  const ratingsByRecipeId = new Map<string, Array<{ userId: string; userName: string; userColor: string; rating: number }>>();
+  if (recipeList.length > 0) {
+    const ratingRows = await db
+      .select({
+        recipeId: recipeRatings.recipeId,
+        userId: recipeRatings.userId,
+        userName: users.name,
+        userColor: users.color,
+        rating: recipeRatings.rating,
+      })
+      .from(recipeRatings)
+      .innerJoin(users, eq(recipeRatings.userId, users.id))
+      .where(inArray(recipeRatings.recipeId, recipeList.map((r) => r.id)));
+
+    for (const row of ratingRows) {
+      const list = ratingsByRecipeId.get(row.recipeId) ?? [];
+      list.push({ userId: row.userId, userName: row.userName, userColor: row.userColor, rating: row.rating });
+      ratingsByRecipeId.set(row.recipeId, list);
+    }
+  }
+
   return {
-    recipes: recipeList.map(row => formatRecipeRow(row)),
+    recipes: recipeList.map(row => ({
+      ...formatRecipeRow(row),
+      ratings: ratingsByRecipeId.get(row.id) ?? [],
+    })),
     total: totalCount,
     limit,
     offset,

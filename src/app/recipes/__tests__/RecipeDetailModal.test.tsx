@@ -10,9 +10,11 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { RecipeDetailModal } from '../RecipeDetailModal';
 import type { Recipe } from '@/lib/hooks/useRecipes';
 
-// RecipeDetailModal renders AddToMealPlanSection, which needs useAuth.
+// RecipeDetailModal renders AddToMealPlanSection, which needs useAuth, and
+// reads useFamily directly for the per-person rating rows.
 jest.mock('@/components/providers', () => ({
-  useAuth: () => ({ requireAuth: jest.fn().mockResolvedValue({ id: 'parent-1' }) }),
+  useAuth: () => ({ requireAuth: jest.fn().mockResolvedValue({ id: 'parent-1' }), activeUser: { id: 'parent-1' } }),
+  useFamily: () => ({ members: [] }),
 }));
 jest.mock('@/components/ui/use-toast', () => ({ toast: jest.fn() }));
 

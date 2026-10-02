@@ -44,6 +44,11 @@ export const users = pgTable('users', {
   // Display order in the PIN login pad and profile lists (lower = first)
   sortOrder: integer('sort_order').default(0).notNull(),
 
+  // Opt-in, not opt-out: a parent explicitly turns this on per person (e.g.
+  // each kid) in Settings. Off by default so existing installs don't
+  // suddenly grow a star row per family member on every recipe.
+  includeInMealRatings: boolean('include_in_meal_ratings').default(false).notNull(),
+
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (table) => ({
@@ -623,6 +628,9 @@ export const recipes = pgTable('recipes', {
   imageUrl: text('image_url'),
 
   // Ratings and notes
+  // Server-computed average of recipe_ratings (not directly writable) once
+  // any opted-in family member has rated it - see recipeRatings below.
+  // Used for sorting/display when there's no per-person breakdown to show.
   rating: integer('rating'), // 1-5 stars
   notes: text('notes'),
 
@@ -644,6 +652,23 @@ export const recipes = pgTable('recipes', {
   // Upsert/match key for synced recipes. (null, null) local rows don't collide
   // — Postgres treats NULLs as distinct in a unique index.
   sourceExternalUnique: uniqueIndex('recipes_source_external_unique').on(table.sourceId, table.externalId),
+}));
+
+// One row per (recipe, person) who has rated it. recipes.rating is kept in
+// sync as the computed average across these rows whenever one changes - see
+// POST /api/recipes/[id]/ratings.
+export const recipeRatings = pgTable('recipe_ratings', {
+  id: uuid('id').defaultRandom().primaryKey(),
+
+  recipeId: uuid('recipe_id').notNull().references(() => recipes.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+
+  rating: integer('rating').notNull(), // 1-5 stars
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  recipeUserUnique: uniqueIndex('recipe_ratings_recipe_user_unique').on(table.recipeId, table.userId),
 }));
 
 

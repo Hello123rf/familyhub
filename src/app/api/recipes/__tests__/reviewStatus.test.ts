@@ -27,9 +27,17 @@ const mockSelectResult = { rows: [] as unknown[] };
 const mockDeleteReturning = jest.fn();
 
 function makeSelectChain() {
+  // Distinguishes the recipes query from the per-recipe ratings batch-fetch
+  // sharing this same mock chain, by which table .from() was called with —
+  // the recipeRatings mock below is the only one with a `recipeId` key.
+  let isRatingsQuery = false;
   const chain = {
-    from: () => chain,
+    from: (table: Record<string, unknown>) => {
+      isRatingsQuery = 'recipeId' in table;
+      return chain;
+    },
     leftJoin: () => chain,
+    innerJoin: () => chain,
     orderBy: () => chain,
     limit: () => chain,
     offset: () => chain,
@@ -37,7 +45,9 @@ function makeSelectChain() {
       mockWhereConditions.push(conditions);
       return chain;
     },
-    then: (resolve: (v: unknown) => void) => resolve(mockSelectResult.rows),
+    // The ratings batch-fetch always has nothing to report in these tests —
+    // mockSelectResult.rows are recipe rows, not rating rows.
+    then: (resolve: (v: unknown) => void) => resolve(isRatingsQuery ? [] : mockSelectResult.rows),
   };
   return chain;
 }
@@ -56,7 +66,8 @@ jest.mock('@/lib/db/client', () => ({
 
 jest.mock('@/lib/db/schema', () => ({
   recipes: { reviewStatus: 'review_status', updatedAt: 'updated_at', id: 'id', createdBy: 'created_by', name: 'name' },
-  users: { id: 'id', name: 'name' },
+  users: { id: 'id', name: 'name', color: 'color' },
+  recipeRatings: { recipeId: 'recipe_id', userId: 'user_id', rating: 'rating' },
 }));
 
 jest.mock('@/lib/cache/redis', () => ({
@@ -92,7 +103,7 @@ describe('GET /api/recipes — Recipe Inbox default filtering', () => {
     const res = await GET(new NextRequest('http://localhost:3000/api/recipes?reviewStatus=inbox'));
     const data = await res.json();
     expect(res.status).toBe(200);
-    expect(data.recipes).toEqual([{ id: 'r1', reviewStatus: 'inbox', name: 'Captured Pancakes' }]);
+    expect(data.recipes).toEqual([{ id: 'r1', reviewStatus: 'inbox', name: 'Captured Pancakes', ratings: [] }]);
   });
 
   it('ignores an invalid reviewStatus value rather than erroring', async () => {

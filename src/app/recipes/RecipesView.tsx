@@ -50,7 +50,7 @@ export function RecipesView() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [paramHandled, setParamHandled] = useState(false);
 
-  const { recipes, loading, error, deleteRecipe, toggleFavorite, markAsMade, importFromUrl, importFromPaprika, createRecipe, updateRecipe, refresh } = useRecipes({
+  const { recipes, loading, error, deleteRecipe, toggleFavorite, markAsMade, rateRecipe, importFromUrl, importFromPaprika, createRecipe, updateRecipe, refresh } = useRecipes({
     favorite: viewMode === 'favorites' ? true : undefined,
   });
 
@@ -302,7 +302,13 @@ export function RecipesView() {
           onEdit={() => setShowEditModal(true)}
           onDelete={() => handleDelete(selectedRecipe)}
           onToggleFavorite={() => toggleFavorite(selectedRecipe.id)}
-          onRate={(rating) => updateRecipe(selectedRecipe.id, { rating })}
+          onRate={async (rating) => {
+            try {
+              await rateRecipe(selectedRecipe.id, rating);
+            } catch (err) {
+              toast({ title: err instanceof Error ? err.message : 'Failed to save rating', variant: 'destructive' });
+            }
+          }}
           onMarkAsMade={() => markAsMade(selectedRecipe.id)}
           onAddToShoppingList={async (listId, ingredients) => {
             for (const ing of ingredients) await addShoppingItem(listId, { name: ing.text });

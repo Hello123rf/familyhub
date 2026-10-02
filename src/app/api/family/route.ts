@@ -23,6 +23,7 @@ interface FamilyMemberResponse {
   /** Per-member PIN length (4/5/6). Not sensitive — every PIN pad needs it. */
   pinLength: number;
   createdAt: string;
+  includeInMealRatings: boolean;
 }
 
 /** Display-only shape returned to unauthenticated callers (no UUIDs). */
@@ -163,6 +164,7 @@ export async function GET(request: NextRequest) {
           pin: users.pin,
           pinLength: users.pinLength,
           createdAt: users.createdAt,
+          includeInMealRatings: users.includeInMealRatings,
         })
         .from(users)
         .orderBy(users.sortOrder, users.createdAt);
@@ -182,6 +184,7 @@ export async function GET(request: NextRequest) {
         hasPin: !!user.pin,
         pinLength: user.pinLength,
         createdAt: user.createdAt.toISOString(),
+        includeInMealRatings: user.includeInMealRatings,
       }));
 
       return { members, total: members.length };
@@ -324,6 +327,7 @@ export async function POST(request: NextRequest) {
       hasPin: !!hashedPin,
       pinLength: newMember.pinLength,
       createdAt: newMember.createdAt.toISOString(),
+      includeInMealRatings: newMember.includeInMealRatings,
     };
 
     await invalidateEntity('family');

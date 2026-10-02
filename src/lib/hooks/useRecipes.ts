@@ -36,7 +36,10 @@ export interface Recipe {
   cuisine?: string | null;
   category?: string | null;
   imageUrl?: string | null;
+  /** Server-computed average across `ratings` - not directly settable. */
   rating?: number | null;
+  /** One entry per family member who has rated this recipe (opted-in via Settings). */
+  ratings?: RecipeRating[];
   notes?: string | null;
   timesMade: number;
   lastMadeAt?: string | null;
@@ -45,6 +48,13 @@ export interface Recipe {
   createdByName?: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface RecipeRating {
+  userId: string;
+  userName: string;
+  userColor: string;
+  rating: number;
 }
 
 interface RecipesResponse {
@@ -249,6 +259,23 @@ export function useRecipes(options: UseRecipesOptions = {}) {
     });
   }, [recipes, updateRecipe]);
 
+  /** Sets (or clears, with rating=null) the CALLING user's own rating. */
+  const rateRecipe = useCallback(async (id: string, rating: number | null): Promise<void> => {
+    const res = await fetch(`/api/recipes/${id}/ratings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rating }),
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || 'Failed to save rating');
+    }
+
+    const { ratings, averageRating } = await res.json();
+    setRecipes(prev => prev.map(r => r.id === id ? { ...r, ratings, rating: averageRating } : r));
+  }, []);
+
   return {
     recipes,
     total,
@@ -262,6 +289,7 @@ export function useRecipes(options: UseRecipesOptions = {}) {
     importFromPaprika,
     toggleFavorite,
     markAsMade,
+    rateRecipe,
   };
 }
 

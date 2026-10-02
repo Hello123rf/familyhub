@@ -12,6 +12,8 @@ export interface FamilyMember {
   hasPin?: boolean;
   /** Number of digits this member's PIN pad requires (4/5/6). Not sensitive — exposed even unauthenticated. */
   pinLength?: number;
+  /** Opted into per-person meal ratings by a parent. Undefined in unauthenticated context. */
+  includeInMealRatings?: boolean;
 }
 
 export interface Task {

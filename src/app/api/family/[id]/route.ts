@@ -91,7 +91,11 @@ export async function PATCH(
     if (auth) {
       const editingSelf = id === auth.userId;
       const changingRole = body.role !== undefined;
-      if (!editingSelf || changingRole) {
+      // "Admin picks who rates" is the whole point of this setting — a kid
+      // opting themselves in/out defeats it, so it forces the gate even on
+      // a self-edit, same as changingRole.
+      const changingMealRatings = body.includeInMealRatings !== undefined;
+      if (!editingSelf || changingRole || changingMealRatings) {
         const forbidden = requireRole(auth, 'canManageUsers');
         if (forbidden) return forbidden;
       }
@@ -159,6 +163,10 @@ export async function PATCH(
 
     if (body.avatarUrl !== undefined) {
       updates.avatarUrl = body.avatarUrl || null;
+    }
+
+    if (body.includeInMealRatings !== undefined) {
+      updates.includeInMealRatings = Boolean(body.includeInMealRatings);
     }
 
     // Per-member PIN length (4/5/6). Validated up front so a PIN submitted in
@@ -281,6 +289,7 @@ export async function PATCH(
       hasPin: !!updatedMember.pin,
       pinLength: updatedMember.pinLength,
       createdAt: updatedMember.createdAt.toISOString(),
+      includeInMealRatings: updatedMember.includeInMealRatings,
     });
   } catch (error) {
     logError('Error updating family member:', error);

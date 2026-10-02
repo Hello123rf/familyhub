@@ -550,6 +550,20 @@ CREATE TABLE IF NOT EXISTS public.recipes (
 
 
 --
+-- Name: recipe_ratings; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS public.recipe_ratings (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    recipe_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    rating integer NOT NULL,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL
+);
+
+
+--
 -- Name: settings; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -784,7 +798,8 @@ CREATE TABLE IF NOT EXISTS public.users (
     created_at timestamp without time zone DEFAULT now() NOT NULL,
     updated_at timestamp without time zone DEFAULT now() NOT NULL,
     sort_order integer DEFAULT 0 NOT NULL,
-    pin_length integer DEFAULT 4 NOT NULL
+    pin_length integer DEFAULT 4 NOT NULL,
+    include_in_meal_ratings boolean DEFAULT false NOT NULL
 );
 
 
@@ -1106,6 +1121,14 @@ ALTER TABLE ONLY public.photos
 
 ALTER TABLE ONLY public.recipes
     ADD CONSTRAINT recipes_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: recipe_ratings recipe_ratings_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.recipe_ratings
+    ADD CONSTRAINT recipe_ratings_pkey PRIMARY KEY (id);
 
 
 --
@@ -2283,6 +2306,24 @@ ALTER TABLE ONLY public.photos
 
 ALTER TABLE ONLY public.recipes
     ADD CONSTRAINT recipes_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: recipe_ratings recipe_ratings_recipe_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.recipe_ratings
+    ADD CONSTRAINT recipe_ratings_recipe_id_fkey FOREIGN KEY (recipe_id) REFERENCES public.recipes(id) ON DELETE CASCADE;
+
+
+--
+-- Name: recipe_ratings recipe_ratings_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.recipe_ratings
+    ADD CONSTRAINT recipe_ratings_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+CREATE UNIQUE INDEX IF NOT EXISTS recipe_ratings_recipe_user_unique ON public.recipe_ratings (recipe_id, user_id);
 
 
 --

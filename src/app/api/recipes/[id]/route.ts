@@ -152,9 +152,9 @@ export async function PATCH(
       updateData.imageUrl = body.imageUrl?.trim() || null;
     }
 
-    if ('rating' in body) {
-      updateData.rating = body.rating || null;
-    }
+    // rating is intentionally NOT settable here - it's the server-computed
+    // average across per-person ratings (POST /api/recipes/[id]/ratings),
+    // not a plain field a generic PATCH should be able to overwrite.
 
     if ('notes' in body) {
       updateData.notes = body.notes?.trim() || null;
