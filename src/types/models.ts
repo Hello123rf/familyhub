@@ -41,8 +41,10 @@ export interface Chore {
   title: string;
   description?: string;
   category: 'cleaning' | 'laundry' | 'dishes' | 'yard' | 'pets' | 'trash' | 'other';
-  frequency: 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'semi-annually' | 'annually' | 'custom';
+  frequency: 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'semi-annually' | 'annually' | 'custom' | 'custom_days';
   customIntervalDays?: number;
+  /** For custom_days: which weekdays it's due, 0=Sunday..6=Saturday. */
+  daysOfWeek?: number[] | null;
   startDay?: string | null;
   lastCompleted?: Date | string;
   nextDue?: string;

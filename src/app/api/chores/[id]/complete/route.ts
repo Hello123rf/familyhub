@@ -80,6 +80,7 @@ export async function POST(
         frequency: chores.frequency,
         customIntervalDays: chores.customIntervalDays,
         startDay: chores.startDay,
+        daysOfWeek: chores.daysOfWeek,
       })
       .from(chores)
       .where(eq(chores.id, choreId));
@@ -200,7 +201,7 @@ export async function POST(
 
       // If auto-approved (parent completing), update chore's lastCompleted and nextDue
       if (!needsApproval) {
-        const nextDue = calculateNextDue(chore.frequency, chore.customIntervalDays, chore.startDay);
+        const nextDue = calculateNextDue(chore.frequency, chore.customIntervalDays, chore.startDay, undefined, chore.daysOfWeek);
         await tx
           .update(chores)
           .set({
@@ -308,7 +309,7 @@ export async function DELETE(
           lastCompleted: mostRecent?.completedAt ?? null,
           nextDue:
             mostRecent && chore
-              ? calculateNextDue(chore.frequency, chore.customIntervalDays, chore.startDay)
+              ? calculateNextDue(chore.frequency, chore.customIntervalDays, chore.startDay, undefined, chore.daysOfWeek)
               : null,
           updatedAt: new Date(),
         })

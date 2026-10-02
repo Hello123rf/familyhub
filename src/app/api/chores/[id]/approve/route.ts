@@ -76,6 +76,7 @@ export async function POST(
         frequency: chores.frequency,
         customIntervalDays: chores.customIntervalDays,
         startDay: chores.startDay,
+        daysOfWeek: chores.daysOfWeek,
       })
       .from(chores)
       .where(eq(chores.id, choreId));
@@ -135,7 +136,7 @@ export async function POST(
 
     // Approve completion + update chore atomically
     const now = new Date();
-    const nextDue = calculateNextDue(chore.frequency, chore.customIntervalDays, chore.startDay);
+    const nextDue = calculateNextDue(chore.frequency, chore.customIntervalDays, chore.startDay, undefined, chore.daysOfWeek);
 
     await db.transaction(async (tx) => {
       await tx

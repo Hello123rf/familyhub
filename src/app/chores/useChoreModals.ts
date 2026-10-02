@@ -8,6 +8,7 @@ interface ChoreFormData {
   description?: string;
   category: string;
   frequency: string;
+  daysOfWeek?: number[] | null;
   startDay?: string | null;
   pointValue: number;
   requiresApproval: boolean;
@@ -40,6 +41,7 @@ export function useChoreModals({
           description: chore.description,
           category: chore.category,
           frequency: chore.frequency,
+          daysOfWeek: chore.daysOfWeek || undefined,
           startDay: chore.startDay || null,
           pointValue: chore.pointValue,
           requiresApproval: chore.requiresApproval,
@@ -70,6 +72,7 @@ export function useChoreModals({
           description: updatedChore.description,
           category: updatedChore.category,
           frequency: updatedChore.frequency,
+          daysOfWeek: updatedChore.daysOfWeek ?? null,
           startDay: updatedChore.startDay || null,
           pointValue: updatedChore.pointValue,
           requiresApproval: updatedChore.requiresApproval,

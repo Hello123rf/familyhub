@@ -336,10 +336,14 @@ export const chores = pgTable('chores', {
   assignedTo: uuid('assigned_to').references(() => users.id, { onDelete: 'set null' }),
 
   frequency: varchar('frequency', { length: 20 }).notNull()
-    .$type<'daily' | 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'semi-annually' | 'annually' | 'custom'>(),
+    .$type<'daily' | 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'semi-annually' | 'annually' | 'custom' | 'custom_days'>(),
 
   // For custom frequencies: number of days between occurrences
   customIntervalDays: integer('custom_interval_days'),
+
+  // For custom_days: which days of the week it's due, 0=Sunday..6=Saturday
+  // (e.g. [1, 3, 6] for Mon/Wed/Sat). Null/unused for every other frequency.
+  daysOfWeek: jsonb('days_of_week').$type<number[] | null>(),
 
   // Start day override: 0=Sunday, 1=Monday, ..., 6=Saturday
   // For weekly: which day of the week the chore resets

@@ -55,6 +55,8 @@ export async function GET(
         category: chores.category,
         frequency: chores.frequency,
         customIntervalDays: chores.customIntervalDays,
+
+        daysOfWeek: chores.daysOfWeek,
         startDay: chores.startDay,
         lastCompleted: chores.lastCompleted,
         nextDue: chores.nextDue,
@@ -88,6 +90,8 @@ export async function GET(
       category: choreWithUser.category,
       frequency: choreWithUser.frequency,
       customIntervalDays: choreWithUser.customIntervalDays,
+
+      daysOfWeek: choreWithUser.daysOfWeek || null,
       startDay: choreWithUser.startDay || null,
       lastCompleted: choreWithUser.lastCompleted?.toISOString() || null,
       nextDue: choreWithUser.nextDue || null,
@@ -195,6 +199,8 @@ export async function PATCH(
         category: chores.category,
         frequency: chores.frequency,
         customIntervalDays: chores.customIntervalDays,
+
+        daysOfWeek: chores.daysOfWeek,
         startDay: chores.startDay,
         lastCompleted: chores.lastCompleted,
         nextDue: chores.nextDue,
@@ -237,6 +243,8 @@ export async function PATCH(
       category: updatedChoreWithUser.category,
       frequency: updatedChoreWithUser.frequency,
       customIntervalDays: updatedChoreWithUser.customIntervalDays,
+
+      daysOfWeek: updatedChoreWithUser.daysOfWeek || null,
       startDay: updatedChoreWithUser.startDay || null,
       lastCompleted: updatedChoreWithUser.lastCompleted?.toISOString() || null,
       nextDue: updatedChoreWithUser.nextDue || null,

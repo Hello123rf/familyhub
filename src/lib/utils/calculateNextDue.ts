@@ -23,7 +23,7 @@ import {
 
 const dayFunctions = [nextSunday, nextMonday, nextTuesday, nextWednesday, nextThursday, nextFriday, nextSaturday];
 
-export type ChoreFrequency = 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'semi-annually' | 'annually' | 'custom';
+export type ChoreFrequency = 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'semi-annually' | 'annually' | 'custom' | 'custom_days';
 
 /**
  * Calculate the next due date based on frequency and optional startDay override.
@@ -31,17 +31,20 @@ export type ChoreFrequency = 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'quar
  * - monthly: next occurrence of day-of-month (1-28), default 1st
  * - annually: next occurrence of MM-DD, default same month-day next year
  * - daily/custom: just add the interval
+ * - custom_days: next occurrence of any day in daysOfWeek (e.g. [1, 3, 6] for Mon/Wed/Sat)
  *
  * @param frequency - The chore frequency
  * @param customIntervalDays - For 'custom' frequency, number of days between occurrences
  * @param startDay - Override for target day (varies by frequency type)
  * @param referenceDate - The date to calculate from (defaults to now, useful for testing)
+ * @param daysOfWeek - For 'custom_days' frequency, which weekdays it's due (0=Sun..6=Sat)
  */
 export function calculateNextDue(
   frequency: ChoreFrequency,
   customIntervalDays?: number | null,
   startDay?: string | null,
-  referenceDate?: Date
+  referenceDate?: Date,
+  daysOfWeek?: number[] | null
 ): string {
   const today = startOfDay(referenceDate ?? new Date());
   let nextDate: Date;
@@ -121,6 +124,21 @@ export function calculateNextDue(
     case 'custom':
       nextDate = addDays(today, customIntervalDays || 1);
       break;
+
+    case 'custom_days': {
+      // Nearest day in the set strictly after today, same exclusive
+      // "next occurrence" semantics as weekly/biweekly above - the common
+      // caller is "just completed it today", so today itself never
+      // qualifies even if it's one of the chosen days.
+      const validDays = (daysOfWeek ?? []).filter((d) => d >= 0 && d <= 6);
+      if (validDays.length === 0) {
+        nextDate = addDays(today, 1);
+        break;
+      }
+      const candidates = validDays.map((d) => dayFunctions[d]!(today));
+      nextDate = candidates.reduce((earliest, d) => (isBefore(d, earliest) ? d : earliest));
+      break;
+    }
 
     default:
       nextDate = addDays(today, 1);

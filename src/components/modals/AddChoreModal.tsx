@@ -41,8 +41,9 @@ export interface CreatedChore {
   title: string;
   description: string | null;
   category: 'cleaning' | 'laundry' | 'dishes' | 'yard' | 'pets' | 'trash' | 'other';
-  frequency: 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'semi-annually' | 'annually' | 'custom';
+  frequency: 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'semi-annually' | 'annually' | 'custom' | 'custom_days';
   customIntervalDays?: number | null;
+  daysOfWeek?: number[] | null;
   pointValue: number;
   requiresApproval: boolean;
   assignedTo: {
@@ -60,8 +61,9 @@ export interface ChoreToEdit {
   title: string;
   description?: string;
   category: 'cleaning' | 'laundry' | 'dishes' | 'yard' | 'pets' | 'trash' | 'other';
-  frequency: 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'semi-annually' | 'annually' | 'custom';
+  frequency: 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'semi-annually' | 'annually' | 'custom' | 'custom_days';
   customIntervalDays?: number;
+  daysOfWeek?: number[] | null;
   startDay?: string | null;
   pointValue: number;
   requiresApproval: boolean;
@@ -116,8 +118,9 @@ export function AddChoreModal({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState<'cleaning' | 'laundry' | 'dishes' | 'yard' | 'pets' | 'trash' | 'other'>('cleaning');
-  const [frequency, setFrequency] = useState<'daily' | 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'semi-annually' | 'annually' | 'custom'>('weekly');
+  const [frequency, setFrequency] = useState<'daily' | 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'semi-annually' | 'annually' | 'custom' | 'custom_days'>('weekly');
   const [customIntervalDays, setCustomIntervalDays] = useState<number>(7);
+  const [daysOfWeek, setDaysOfWeek] = useState<number[]>([]);
   const [startDay, setStartDay] = useState<string>('');
   const [pointValue, setPointValue] = useState(5);
   const [requiresApproval, setRequiresApproval] = useState(false);
@@ -138,6 +141,7 @@ export function AddChoreModal({
       setCategory(chore.category);
       setFrequency(chore.frequency);
       setCustomIntervalDays(chore.customIntervalDays || 7);
+      setDaysOfWeek(chore.daysOfWeek || []);
       setStartDay(chore.startDay || '');
       setPointValue(chore.pointValue);
       setRequiresApproval(chore.requiresApproval);
@@ -153,6 +157,7 @@ export function AddChoreModal({
       setCategory('cleaning');
       setFrequency('weekly');
       setCustomIntervalDays(7);
+      setDaysOfWeek([]);
       setStartDay('');
       setPointValue(5);
       setRequiresApproval(false);
@@ -181,6 +186,13 @@ export function AddChoreModal({
 
       if (frequency === 'custom') {
         payload.customIntervalDays = customIntervalDays;
+      }
+
+      if (frequency === 'custom_days') {
+        if (daysOfWeek.length === 0) {
+          throw new Error('Pick at least one day for a custom-days chore');
+        }
+        payload.daysOfWeek = daysOfWeek;
       }
 
       if (startDay) {
@@ -276,7 +288,7 @@ export function AddChoreModal({
           <div className="space-y-2">
             <Label>Frequency</Label>
             <div className="flex gap-2 flex-wrap">
-              {(['daily', 'weekly', 'biweekly', 'monthly', 'quarterly', 'semi-annually', 'annually'] as const).map((freq) => (
+              {(['daily', 'weekly', 'biweekly', 'custom_days', 'monthly', 'quarterly', 'semi-annually', 'annually'] as const).map((freq) => (
                 <Button
                   key={freq}
                   type="button"
@@ -285,7 +297,7 @@ export function AddChoreModal({
                   onClick={() => setFrequency(freq)}
                   className="capitalize"
                 >
-                  {freq === 'semi-annually' ? 'Semi-Annual' : freq}
+                  {freq === 'semi-annually' ? 'Semi-Annual' : freq === 'custom_days' ? 'Custom Days' : freq}
                 </Button>
               ))}
             </div>
@@ -303,6 +315,35 @@ export function AddChoreModal({
                 min="1"
                 max="365"
               />
+            </div>
+          )}
+
+          {/* Custom Days (multi-select, e.g. Mon/Wed/Sat) */}
+          {frequency === 'custom_days' && (
+            <div className="space-y-2">
+              <Label>Days</Label>
+              <div className="flex gap-2 flex-wrap">
+                {DAYS_SHORT_ARRAY.map((day, idx) => (
+                  <Button
+                    key={day}
+                    type="button"
+                    variant={daysOfWeek.includes(idx) ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() =>
+                      setDaysOfWeek((prev) =>
+                        prev.includes(idx) ? prev.filter((d) => d !== idx) : [...prev, idx].sort(),
+                      )
+                    }
+                  >
+                    {day}
+                  </Button>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {daysOfWeek.length > 0
+                  ? `Due every ${daysOfWeek.map((d) => DAYS_LONG_ARRAY[d]).join(', ')}`
+                  : 'Pick at least one day'}
+              </p>
             </div>
           )}
 

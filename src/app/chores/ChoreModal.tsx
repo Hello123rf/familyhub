@@ -40,6 +40,7 @@ export function ChoreModal({
   const [description, setDescription] = useState(chore?.description || '');
   const [category, setCategory] = useState<Chore['category']>(chore?.category || 'cleaning');
   const [frequency, setFrequency] = useState<Chore['frequency']>(chore?.frequency || 'weekly');
+  const [daysOfWeek, setDaysOfWeek] = useState<number[]>(chore?.daysOfWeek || []);
   const [startDay, setStartDay] = useState(chore?.startDay || '');
   const [pointValue, setPointValue] = useState(chore?.pointValue || 5);
   const [requiresApproval, setRequiresApproval] = useState(chore?.requiresApproval || false);
@@ -51,6 +52,7 @@ export function ChoreModal({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
+    if (frequency === 'custom_days' && daysOfWeek.length === 0) return;
 
     const selectedMember = familyMembers.find((m) => m.id === assignedTo);
 
@@ -59,6 +61,7 @@ export function ChoreModal({
       description: description.trim() || undefined,
       category,
       frequency,
+      daysOfWeek: frequency === 'custom_days' ? daysOfWeek : undefined,
       startDay: startDay || undefined,
       pointValue,
       requiresApproval,
@@ -119,7 +122,7 @@ export function ChoreModal({
           <div>
             <label className="text-sm font-medium">Frequency</label>
             <div className="flex gap-2 mt-1 flex-wrap">
-              {(['daily', 'weekly', 'biweekly', 'monthly', 'quarterly', 'semi-annually', 'annually'] as const).map((freq) => (
+              {(['daily', 'weekly', 'biweekly', 'custom_days', 'monthly', 'quarterly', 'semi-annually', 'annually'] as const).map((freq) => (
                 <Button
                   key={freq}
                   type="button"
@@ -128,11 +131,40 @@ export function ChoreModal({
                   onClick={() => setFrequency(freq)}
                   className="capitalize"
                 >
-                  {freq === 'semi-annually' ? 'Semi-Annual' : freq}
+                  {freq === 'semi-annually' ? 'Semi-Annual' : freq === 'custom_days' ? 'Custom Days' : freq}
                 </Button>
               ))}
             </div>
           </div>
+
+          {/* Custom Days (multi-select, e.g. Mon/Wed/Sat) */}
+          {frequency === 'custom_days' && (
+            <div>
+              <label className="text-sm font-medium">Days</label>
+              <div className="flex gap-2 mt-1 flex-wrap">
+                {DAYS_SHORT_ARRAY.map((day, idx) => (
+                  <Button
+                    key={day}
+                    type="button"
+                    variant={daysOfWeek.includes(idx) ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() =>
+                      setDaysOfWeek((prev) =>
+                        prev.includes(idx) ? prev.filter((d) => d !== idx) : [...prev, idx].sort(),
+                      )
+                    }
+                  >
+                    {day}
+                  </Button>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {daysOfWeek.length > 0
+                  ? `Due every ${daysOfWeek.map((d) => DAYS_LONG_ARRAY[d]).join(', ')}`
+                  : 'Pick at least one day'}
+              </p>
+            </div>
+          )}
 
           {/* Start Day / Reset Day */}
           {(['weekly', 'biweekly'].includes(frequency)) && (

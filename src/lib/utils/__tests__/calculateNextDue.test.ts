@@ -105,6 +105,26 @@ describe('calculateNextDue', () => {
     expect(calculateNextDue('custom', null, null, REF)).toBe('2026-03-12');
   });
 
+  // --- custom_days ---
+  it('custom_days with [Mon, Wed, Sat] from a Wednesday → next Saturday', () => {
+    // 2026-03-11 is Wednesday. "Next Wednesday" (exclusive of today) is
+    // 03-18 and "next Monday" is 03-16, but "next Saturday" (03-14) is
+    // earlier than both, so it wins even though today itself is Wednesday.
+    expect(calculateNextDue('custom_days', null, null, REF, [1, 3, 6])).toBe('2026-03-14');
+  });
+
+  it('custom_days with a single day → same as weekly with that startDay', () => {
+    expect(calculateNextDue('custom_days', null, null, REF, [1])).toBe('2026-03-16');
+  });
+
+  it('custom_days with no days selected → tomorrow (fallback)', () => {
+    expect(calculateNextDue('custom_days', null, null, REF, [])).toBe('2026-03-12');
+  });
+
+  it('custom_days with daysOfWeek omitted → tomorrow (fallback)', () => {
+    expect(calculateNextDue('custom_days', null, null, REF)).toBe('2026-03-12');
+  });
+
   // --- edge cases ---
   it('monthly clamps startDay to max 28', () => {
     // startDay=31 should be clamped to 28

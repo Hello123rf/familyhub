@@ -28,6 +28,7 @@ import * as React from 'react';
 import { Emoji } from '@/components/ui/Emoji';
 import { useState, useMemo, useCallback } from 'react';
 import { format, isToday, isTomorrow, isPast, parseISO } from 'date-fns';
+import { DAYS_SHORT_ARRAY } from '@/lib/constants/days';
 import { ClipboardList, Plus, AlertCircle, CheckCircle, Clock, Hourglass } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { WidgetContainer, WidgetEmpty } from './WidgetContainer';
@@ -329,7 +330,7 @@ function ChoreItem({
 
           {/* Frequency */}
           <span className="text-xs text-muted-foreground">
-            {formatFrequency(chore.frequency, chore.customIntervalDays)}
+            {formatFrequency(chore.frequency, chore.customIntervalDays, chore.daysOfWeek)}
           </span>
 
           {/* Due date - only show if not pending */}
@@ -368,7 +369,7 @@ function formatDueDate(dateString: string): string {
  * FORMAT FREQUENCY
  * Formats chore frequency in a human-friendly way.
  */
-function formatFrequency(frequency: string, customIntervalDays?: number): string {
+function formatFrequency(frequency: string, customIntervalDays?: number, daysOfWeek?: number[] | null): string {
   switch (frequency) {
     case 'daily':
       return 'Daily';
@@ -380,6 +381,10 @@ function formatFrequency(frequency: string, customIntervalDays?: number): string
       return 'Monthly';
     case 'custom':
       return customIntervalDays ? `Every ${customIntervalDays} days` : 'Custom';
+    case 'custom_days':
+      return daysOfWeek && daysOfWeek.length > 0
+        ? daysOfWeek.map((d) => DAYS_SHORT_ARRAY[d]).join('/')
+        : 'Custom days';
     default:
       return frequency;
   }

@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { UserAvatar } from '@/components/ui/avatar';
 import { Switch } from '@/components/ui/switch';
 import type { Chore } from '@/types';
+import { DAYS_SHORT_ARRAY } from '@/lib/constants/days';
 
 export function getCategoryEmoji(category: string): string {
   switch (category) {
@@ -53,13 +54,17 @@ export function ChoreItem({
     return `Due ${format(date, 'MMM d')}`;
   };
 
-  const formatFrequency = (frequency: string, customDays?: number | null) => {
+  const formatFrequency = (frequency: string, customDays?: number | null, daysOfWeek?: number[] | null) => {
     switch (frequency) {
       case 'daily': return 'Daily';
       case 'weekly': return 'Weekly';
       case 'biweekly': return 'Every 2 weeks';
       case 'monthly': return 'Monthly';
       case 'custom': return customDays ? `Every ${customDays} days` : 'Custom';
+      case 'custom_days':
+        return daysOfWeek && daysOfWeek.length > 0
+          ? daysOfWeek.map((d) => DAYS_SHORT_ARRAY[d]).join('/')
+          : 'Custom days';
       default: return frequency;
     }
   };
@@ -154,7 +159,7 @@ export function ChoreItem({
             </div>
           )}
 
-          <span>{formatFrequency(chore.frequency, chore.customIntervalDays)}</span>
+          <span>{formatFrequency(chore.frequency, chore.customIntervalDays, chore.daysOfWeek)}</span>
 
           {/* Show due date only if not pending */}
           {!isPendingApproval && chore.nextDue && (

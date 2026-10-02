@@ -103,8 +103,10 @@ export const createChoreSchema = z.object({
   description: z.string().max(5000).optional(),
   category: z.enum(['cleaning', 'laundry', 'dishes', 'yard', 'pets', 'trash', 'other']),
   assignedTo: uuidSchema.optional(),
-  frequency: z.enum(['daily', 'weekly', 'biweekly', 'monthly', 'quarterly', 'semi-annually', 'annually', 'custom']),
+  frequency: z.enum(['daily', 'weekly', 'biweekly', 'monthly', 'quarterly', 'semi-annually', 'annually', 'custom', 'custom_days']),
   customIntervalDays: z.number().int().min(1).max(365).optional(),
+  // For custom_days: which weekdays it's due, 0=Sunday..6=Saturday.
+  daysOfWeek: z.array(z.number().int().min(0).max(6)).min(1).max(7).optional().nullable(),
   startDay: z.string().max(10).optional().nullable(),
   pointValue: z.number().int().min(0).max(1000).optional().default(0),
   requiresApproval: z.boolean().optional().default(false),

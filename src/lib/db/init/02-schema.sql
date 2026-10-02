@@ -268,6 +268,7 @@ CREATE TABLE IF NOT EXISTS public.chores (
     assigned_to uuid,
     frequency character varying(20) NOT NULL,
     custom_interval_days integer,
+    days_of_week jsonb,
     start_day character varying(10),
     last_completed timestamp without time zone,
     next_due date,
