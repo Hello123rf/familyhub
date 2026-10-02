@@ -14,6 +14,9 @@ import {
   Globe,
   Trees,
   Settings,
+  Sunrise,
+  ClipboardList,
+  CloudSun,
 } from 'lucide-react';
 
 export interface NavItem {
@@ -28,6 +31,7 @@ export interface NavItem {
 /** All navigation items in canonical order. */
 export const ALL_NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', i18nKey: 'nav.dashboard', href: '/', icon: Home },
+  { label: 'Today', i18nKey: 'nav.today', href: '/today', icon: Sunrise },
   { label: 'Calendar', i18nKey: 'nav.calendar', href: '/calendar', icon: Calendar },
   { label: 'Tasks', i18nKey: 'nav.tasks', href: '/tasks', icon: CheckSquare },
   { label: 'Chores', i18nKey: 'nav.chores', href: '/chores', icon: ListChecks },
@@ -41,6 +45,8 @@ export const ALL_NAV_ITEMS: NavItem[] = [
   { label: 'Babysitter', i18nKey: 'nav.babysitter', href: '/babysitter', icon: Baby },
   { label: 'Travel', i18nKey: 'nav.travel', href: '/travel', icon: Globe },
   { label: 'Weekend', i18nKey: 'nav.weekend', href: '/weekend', icon: Trees },
+  { label: 'Weather', i18nKey: 'nav.weather', href: '/weather', icon: CloudSun },
+  { label: 'Household', i18nKey: 'nav.household', href: '/household', icon: ClipboardList },
   { label: 'Settings', i18nKey: 'nav.settings', href: '/settings', icon: Settings },
 ];
 

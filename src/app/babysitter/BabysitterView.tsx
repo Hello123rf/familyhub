@@ -56,7 +56,21 @@ const SECTION_CONFIG: Record<BabysitterSection, { label: string; icon: React.Rea
   house_rule: { label: 'House Rules', icon: <ScrollText className="h-5 w-5" /> },
 };
 
-export function BabysitterView() {
+export interface BabysitterViewProps {
+  /** Page header text. Defaults to the babysitter-facing framing. */
+  title?: string;
+  /** Hide the babysitter-mode toggle — not relevant outside that context
+   *  (e.g. the family's own Household Reference page). */
+  showModeToggle?: boolean;
+  /** Where the home button in the header links. */
+  homeHref?: string;
+}
+
+export function BabysitterView({
+  title = 'Babysitter Info',
+  showModeToggle = true,
+  homeHref = '/',
+}: BabysitterViewProps = {}) {
   const { items, loading, error } = useBabysitterInfo();
   const { config: wifiConfig, qrString, hasConfig: hasWifiConfig, loading: wifiLoading } = useWifiConfig();
   const [showPinModal, setShowPinModal] = useState(false);
@@ -102,15 +116,15 @@ export function BabysitterView() {
       {/* Header */}
       <header className="flex items-center justify-between h-16 border-b border-border bg-card/85 backdrop-blur-xs px-4 mb-6 print:mb-4 print:border-0">
         <div className="flex items-center gap-3">
-          <Link href="/">
+          <Link href={homeHref}>
             <Button variant="ghost" size="icon" className="print:hidden">
               <Home className="h-5 w-5" />
             </Button>
           </Link>
-          <h1 className="text-xl font-bold">Babysitter Info</h1>
+          <h1 className="text-xl font-bold">{title}</h1>
         </div>
         <div className="flex items-center gap-2 print:hidden">
-          <BabysitterModeToggle variant="default" size="sm" showLabel />
+          {showModeToggle && <BabysitterModeToggle variant="default" size="sm" showLabel />}
           <Button variant="outline" size="sm" onClick={handlePrint}>
             <Printer className="h-4 w-4 mr-1" />
             Print
