@@ -45,6 +45,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
           hasPin: boolean;
           pinLength?: number;
           includeInMealRatings?: boolean;
+          calendarAliases?: string[];
         }) => ({
           id: m.id,
           loginIndex: m.loginIndex,
@@ -55,6 +56,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
           hasPin: m.hasPin,
           pinLength: m.pinLength,
           includeInMealRatings: m.includeInMealRatings,
+          calendarAliases: m.calendarAliases,
         }));
         // Defensive de-dup by id — a repeated id in the API response would
         // otherwise render the same member twice in every member list/pill

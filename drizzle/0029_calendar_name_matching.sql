@@ -1,0 +1,2 @@
+ALTER TABLE users ADD COLUMN IF NOT EXISTS calendar_aliases JSONB DEFAULT '[]'::jsonb NOT NULL;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS auto_detected_user_id UUID REFERENCES users(id) ON DELETE SET NULL;

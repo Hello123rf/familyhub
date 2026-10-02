@@ -36,6 +36,7 @@ export interface MemberModalSaveData {
   avatarFile?: File | null;
   pinLength: number;
   includeInMealRatings?: boolean;
+  calendarAliases?: string[];
 }
 
 export function MemberModal({
@@ -56,6 +57,9 @@ export function MemberModal({
   // family-wide default any more.
   const [pinLength, setPinLength] = useState(member?.pinLength ?? DEFAULT_PIN_LENGTH);
   const [includeInMealRatings, setIncludeInMealRatings] = useState(member?.includeInMealRatings ?? false);
+  const [calendarAliasesText, setCalendarAliasesText] = useState(
+    (member?.calendarAliases ?? []).join(', ')
+  );
   const [avatarUrl, setAvatarUrl] = useState<string | null>(member?.avatarUrl || null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -117,6 +121,11 @@ export function MemberModal({
       if (!confirmed) return;
     }
 
+    const calendarAliases = calendarAliasesText
+      .split(',')
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+
     onSave({
       name: name.trim(),
       role,
@@ -125,6 +134,7 @@ export function MemberModal({
       avatarFile,
       pinLength,
       includeInMealRatings,
+      calendarAliases,
     });
   };
 
@@ -271,6 +281,19 @@ export function MemberModal({
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               How many digits {member ? `${name || 'this member'}'s` : "this member's"} PIN pad will require.
+            </p>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium">Also known as</label>
+            <Input
+              value={calendarAliasesText}
+              onChange={(e) => setCalendarAliasesText(e.target.value)}
+              placeholder="Rebecca, Becca, Mom, mor"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Comma-separated names. When a shared calendar event mentions one of
+              these and nobody else{"'"}s name, it gets colored as {name || 'this member'}{"'"}s automatically.
             </p>
           </div>
 

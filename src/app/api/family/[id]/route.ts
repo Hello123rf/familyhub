@@ -9,6 +9,7 @@ import { logActivity } from '@/lib/services/auditLog';
 import { logError } from '@/lib/utils/logError';
 import { MIN_PIN_LENGTH, MAX_PIN_LENGTH } from '@/lib/constants';
 import { isSetupComplete } from '@/lib/setup';
+import { parseCalendarAliases } from '@/lib/utils/calendarAliases';
 
 export async function GET(
   request: NextRequest,
@@ -31,6 +32,8 @@ export async function GET(
         pin: users.pin,
         pinLength: users.pinLength,
         createdAt: users.createdAt,
+        includeInMealRatings: users.includeInMealRatings,
+        calendarAliases: users.calendarAliases,
       })
       .from(users)
       .where(eq(users.id, id));
@@ -52,6 +55,8 @@ export async function GET(
       hasPin: !!member.pin,
       pinLength: member.pinLength,
       createdAt: member.createdAt.toISOString(),
+      includeInMealRatings: member.includeInMealRatings,
+      calendarAliases: member.calendarAliases,
     });
   } catch (error) {
     logError('Error fetching family member:', error);
@@ -167,6 +172,17 @@ export async function PATCH(
 
     if (body.includeInMealRatings !== undefined) {
       updates.includeInMealRatings = Boolean(body.includeInMealRatings);
+    }
+
+    if (body.calendarAliases !== undefined) {
+      const calendarAliases = parseCalendarAliases(body.calendarAliases);
+      if (calendarAliases === undefined) {
+        return NextResponse.json(
+          { error: 'calendarAliases must be an array of short strings' },
+          { status: 400 }
+        );
+      }
+      updates.calendarAliases = calendarAliases;
     }
 
     // Per-member PIN length (4/5/6). Validated up front so a PIN submitted in
@@ -290,6 +306,7 @@ export async function PATCH(
       pinLength: updatedMember.pinLength,
       createdAt: updatedMember.createdAt.toISOString(),
       includeInMealRatings: updatedMember.includeInMealRatings,
+      calendarAliases: updatedMember.calendarAliases,
     });
   } catch (error) {
     logError('Error updating family member:', error);

@@ -305,6 +305,7 @@ CREATE TABLE IF NOT EXISTS public.events (
     pending_deletion timestamp without time zone,
     caldav_href character varying(1024),
     caldav_etag character varying(255),
+    auto_detected_user_id uuid,
     created_at timestamp without time zone DEFAULT now() NOT NULL,
     updated_at timestamp without time zone DEFAULT now() NOT NULL
 );
@@ -799,7 +800,8 @@ CREATE TABLE IF NOT EXISTS public.users (
     updated_at timestamp without time zone DEFAULT now() NOT NULL,
     sort_order integer DEFAULT 0 NOT NULL,
     pin_length integer DEFAULT 4 NOT NULL,
-    include_in_meal_ratings boolean DEFAULT false NOT NULL
+    include_in_meal_ratings boolean DEFAULT false NOT NULL,
+    calendar_aliases jsonb DEFAULT '[]'::jsonb NOT NULL
 );
 
 
@@ -2114,6 +2116,14 @@ ALTER TABLE ONLY public.events
 
 ALTER TABLE ONLY public.events
     ADD CONSTRAINT events_created_by_users_id_fk FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: events events_auto_detected_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.events
+    ADD CONSTRAINT events_auto_detected_user_id_fkey FOREIGN KEY (auto_detected_user_id) REFERENCES public.users(id) ON DELETE SET NULL;
 
 
 --

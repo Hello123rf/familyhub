@@ -31,8 +31,14 @@ mockUpdate.mockReturnValue({ set: mockUpdateSet });
 
 const mockDeleteWhere = jest.fn().mockResolvedValue(undefined);
 // db.select(...).from(...).where(...) — used to load dismissed-event tombstones.
+// db.select(...).from(users) — loadPeopleMatchers, no .where() chained — resolves
+// straight to rows, so it's distinguished by table shape rather than call shape.
+let mockPeopleRows: Array<{ id: string; name: string; calendarAliases: string[] }> = [];
 const mockSelect = jest.fn().mockReturnValue({
-  from: jest.fn().mockReturnValue({ where: jest.fn().mockResolvedValue([]) }),
+  from: (table: Record<string, unknown>) => {
+    if (table && 'calendarAliases' in table) return Promise.resolve(mockPeopleRows);
+    return { where: jest.fn().mockResolvedValue([]) };
+  },
 });
 mockDelete.mockReturnValue({ where: mockDeleteWhere });
 
@@ -53,6 +59,7 @@ jest.mock('@/lib/db/schema', () => ({
   calendarSources: { id: 'id', provider: 'provider', enabled: 'enabled' },
   events: { calendarSourceId: 'calendarSourceId', externalEventId: 'externalEventId', startTime: 'startTime', id: 'id', pendingDeletion: 'pendingDeletion' },
   dismissedEvents: { calendarSourceId: 'calendarSourceId', externalEventId: 'externalEventId' },
+  users: { id: 'id', name: 'name', calendarAliases: 'calendarAliases' },
 }));
 
 const mockFetchCalendarEvents = jest.fn();

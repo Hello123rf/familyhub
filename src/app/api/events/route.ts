@@ -23,6 +23,9 @@ import { requireAuth, requireRole, getDisplayAuth } from '@/lib/auth';
 import { db } from '@/lib/db/client';
 import { events, calendarSources, users, calendarGroups } from '@/lib/db/schema';
 import { eq, and, or, gte, lte, asc, isNotNull, isNull } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
+
+const autoDetectedUser = alias(users, 'auto_detected_user');
 import { createEventSchema, validateRequest } from '@/lib/validations';
 import { eventDescriptionToText } from '@/lib/utils/eventDescriptionText';
 import { getCached } from '@/lib/cache/redis';
@@ -159,11 +162,15 @@ export async function GET(request: NextRequest) {
           // Group data (for color)
           groupColor: calendarGroups.color,
           groupName: calendarGroups.name,
+          // Name-matched person (see detectEventPerson), for auto-coloring a
+          // shared family calendar's events by who they're for.
+          autoDetectedColor: autoDetectedUser.color,
         })
         .from(events)
         .leftJoin(calendarSources, eq(events.calendarSourceId, calendarSources.id))
         .leftJoin(users, eq(calendarSources.userId, users.id))
         .leftJoin(calendarGroups, eq(calendarSources.groupId, calendarGroups.id))
+        .leftJoin(autoDetectedUser, eq(events.autoDetectedUserId, autoDetectedUser.id))
         .where(and(
           ...conditions,
           // Only enabled calendars
@@ -453,9 +460,11 @@ export async function POST(request: NextRequest) {
         calendarSourceName: calendarSources.dashboardCalendarName,
         calendarSourceColor: calendarSources.color,
         calendarSourceProvider: calendarSources.provider,
+        autoDetectedColor: autoDetectedUser.color,
       })
       .from(events)
       .leftJoin(calendarSources, eq(events.calendarSourceId, calendarSources.id))
+      .leftJoin(autoDetectedUser, eq(events.autoDetectedUserId, autoDetectedUser.id))
       .where(eq(events.id, newEvent.id));
 
     if (!eventWithSource) {

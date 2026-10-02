@@ -10,6 +10,7 @@ import { logActivity } from '@/lib/services/auditLog';
 import { logError } from '@/lib/utils/logError';
 import { MIN_PIN_LENGTH, MAX_PIN_LENGTH, DEFAULT_PIN_LENGTH } from '@/lib/constants';
 import { isSetupComplete } from '@/lib/setup';
+import { parseCalendarAliases } from '@/lib/utils/calendarAliases';
 import type { PublicMemberField } from './publicShape';
 
 interface FamilyMemberResponse {
@@ -24,6 +25,7 @@ interface FamilyMemberResponse {
   pinLength: number;
   createdAt: string;
   includeInMealRatings: boolean;
+  calendarAliases: string[];
 }
 
 /** Display-only shape returned to unauthenticated callers (no UUIDs). */
@@ -165,6 +167,7 @@ export async function GET(request: NextRequest) {
           pinLength: users.pinLength,
           createdAt: users.createdAt,
           includeInMealRatings: users.includeInMealRatings,
+          calendarAliases: users.calendarAliases,
         })
         .from(users)
         .orderBy(users.sortOrder, users.createdAt);
@@ -185,6 +188,7 @@ export async function GET(request: NextRequest) {
         pinLength: user.pinLength,
         createdAt: user.createdAt.toISOString(),
         includeInMealRatings: user.includeInMealRatings,
+        calendarAliases: user.calendarAliases,
       }));
 
       return { members, total: members.length };
@@ -296,6 +300,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const calendarAliases = parseCalendarAliases(body.calendarAliases);
+    if (calendarAliases === undefined && body.calendarAliases !== undefined) {
+      return NextResponse.json(
+        { error: 'calendarAliases must be an array of short strings' },
+        { status: 400 }
+      );
+    }
+
     const [newMember] = await db
       .insert(users)
       .values({
@@ -307,6 +319,7 @@ export async function POST(request: NextRequest) {
         email: body.email?.trim() || null,
         avatarUrl: body.avatarUrl || null,
         preferences: body.preferences || {},
+        ...(calendarAliases ? { calendarAliases } : {}),
       })
       .returning();
 
@@ -328,6 +341,7 @@ export async function POST(request: NextRequest) {
       pinLength: newMember.pinLength,
       createdAt: newMember.createdAt.toISOString(),
       includeInMealRatings: newMember.includeInMealRatings,
+      calendarAliases: newMember.calendarAliases,
     };
 
     await invalidateEntity('family');

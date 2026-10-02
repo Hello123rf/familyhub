@@ -1,5 +1,6 @@
 import { db } from '@/lib/db/client';
 import { decideDeletionReview } from '@/lib/services/taskDeletionReview';
+import { detectEventPerson, type PersonMatcher } from '@/lib/utils/detectEventPerson';
 
 /**
  * How long something must have been absent before it is flagged, and again
@@ -8,7 +9,7 @@ import { decideDeletionReview } from '@/lib/services/taskDeletionReview';
  * on its own - two misses, roughly two sync cycles apart, are required.
  */
 const MISSING_GRACE_MS = 6 * 60 * 1000;
-import { calendarSources, events, tasks, taskLists, dismissedEvents } from '@/lib/db/schema';
+import { calendarSources, events, tasks, taskLists, dismissedEvents, users } from '@/lib/db/schema';
 import { eq, and, gte, lte, sql, inArray, isNotNull } from 'drizzle-orm';
 import {
   fetchCalDAVEvents,
@@ -190,6 +191,16 @@ function emptyCounts(errors: string[] = []): SyncCounts {
   return { added: 0, updated: 0, removed: 0, autoDeleted: 0, unchanged: 0, synced: 0, errors };
 }
 
+/** Every family member's name + configured aliases, for detectEventPerson. */
+async function loadPeopleMatchers(): Promise<PersonMatcher[]> {
+  const rows = await db.select({
+    id: users.id,
+    name: users.name,
+    calendarAliases: users.calendarAliases,
+  }).from(users);
+  return rows.map((r) => ({ id: r.id, names: [r.name, ...(r.calendarAliases || [])] }));
+}
+
 /** External event ids the user deleted locally (tombstones) — skip on re-sync. */
 async function loadDismissedExternalIds(sourceId: string): Promise<Set<string>> {
   const rows = await db
@@ -366,6 +377,7 @@ export async function syncGoogleCalendarSource(
   const googleEventIds = new Set<string>();
   const existingByExtId = await loadExistingByExternalId(sourceId);
   const dismissed = await loadDismissedExternalIds(sourceId);
+  const people = await loadPeopleMatchers();
 
   // Process each event using upsert to prevent duplicates
   for (const googleEvent of googleEvents) {
@@ -376,6 +388,10 @@ export async function syncGoogleCalendarSource(
 
       googleEventIds.add(googleEvent.id);
       const internalEvent = convertGoogleEventToInternal(googleEvent, sourceId);
+      const autoDetectedUserId = detectEventPerson(
+        `${internalEvent.title} ${internalEvent.description || ''}`,
+        people,
+      );
 
       // Use upsert (ON CONFLICT) to prevent race condition duplicates
       await db
@@ -392,6 +408,7 @@ export async function syncGoogleCalendarSource(
           recurring: internalEvent.recurring,
           recurrenceRule: internalEvent.recurrenceRule,
           lastSynced: new Date(),
+          autoDetectedUserId,
         })
         .onConflictDoUpdate({
           target: [events.calendarSourceId, events.externalEventId],
@@ -406,6 +423,7 @@ export async function syncGoogleCalendarSource(
             recurrenceRule: internalEvent.recurrenceRule,
             lastSynced: new Date(),
             updatedAt: new Date(),
+            autoDetectedUserId,
           },
         });
 
@@ -705,6 +723,7 @@ export async function syncIcalCalendarSource(
   const externalIds = new Set<string>();
   const existingByExtId = await loadExistingByExternalId(sourceId);
   const dismissed = await loadDismissedExternalIds(sourceId);
+  const people = await loadPeopleMatchers();
   let veventCount = 0;
 
   for (const item of Object.values(parsed)) {
@@ -775,6 +794,7 @@ export async function syncIcalCalendarSource(
       const title = readIcalString(vevent.summary) || '(no title)';
       const description = readIcalString(vevent.description);
       const location = readIcalString(vevent.location);
+      const autoDetectedUserId = detectEventPerson(`${title} ${description || ''}`, people);
 
       for (const inst of instances) {
         if (dismissed.has(inst.externalId)) continue;
@@ -793,6 +813,7 @@ export async function syncIcalCalendarSource(
             recurring: isRecurring,
             recurrenceRule,
             lastSynced: new Date(),
+            autoDetectedUserId,
           })
           .onConflictDoUpdate({
             target: [events.calendarSourceId, events.externalEventId],
@@ -807,6 +828,7 @@ export async function syncIcalCalendarSource(
               recurrenceRule,
               lastSynced: new Date(),
               updatedAt: new Date(),
+              autoDetectedUserId,
             },
           });
 
@@ -1008,6 +1030,7 @@ export async function syncCalDAVCalendarSource(
     );
 
     const dismissed = await loadDismissedExternalIds(sourceId);
+    const people = await loadPeopleMatchers();
     for (const event of caldavEvents) {
       if (dismissed.has(event.uid)) continue;
       const existing = await db.query.events.findFirst({
@@ -1024,7 +1047,6 @@ export async function syncCalDAVCalendarSource(
         startTime: event.startTime,
         endTime: event.endTime,
         allDay: event.allDay,
-        color: event.color || source.color,
         recurring: event.recurring,
         recurrenceRule: event.recurrenceRule,
         calendarSourceId: sourceId,
@@ -1035,15 +1057,19 @@ export async function syncCalDAVCalendarSource(
         // ETag current for a conflict-safe delete.
         caldavHref: event.href,
         caldavEtag: event.etag,
+        autoDetectedUserId: detectEventPerson(`${event.title} ${event.description || ''}`, people),
         updatedAt: new Date(),
       };
 
       if (existing) {
         if (eventChanged(existing, eventData)) updated++; else unchanged++;
+        // color intentionally excluded from the update set — it's only
+        // stamped once at insert (below), so a manual recolor in the UI
+        // never gets clobbered on the next sync.
         await db.update(events).set(eventData).where(eq(events.id, existing.id));
       } else {
         added++;
-        await db.insert(events).values(eventData);
+        await db.insert(events).values({ ...eventData, color: event.color || source.color });
       }
     }
 

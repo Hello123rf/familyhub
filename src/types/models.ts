@@ -14,6 +14,8 @@ export interface FamilyMember {
   pinLength?: number;
   /** Opted into per-person meal ratings by a parent. Undefined in unauthenticated context. */
   includeInMealRatings?: boolean;
+  /** Name variants ("Becca", "Mom", "mor") matched against synced calendar event text for auto-coloring. */
+  calendarAliases?: string[];
 }
 
 export interface Task {

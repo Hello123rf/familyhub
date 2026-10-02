@@ -49,6 +49,11 @@ export const users = pgTable('users', {
   // suddenly grow a star row per family member on every recipe.
   includeInMealRatings: boolean('include_in_meal_ratings').default(false).notNull(),
 
+  // Name variants ("Rebecca", "Becca", "Mom", "mor") that identify this
+  // person in synced calendar event text, for auto-coloring events on a
+  // shared family calendar. Matched in addition to `name` itself.
+  calendarAliases: jsonb('calendar_aliases').$type<string[]>().default([]).notNull(),
+
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (table) => ({
@@ -183,6 +188,12 @@ export const events = pgTable('events', {
   // share one parent object and are excluded from write-back).
   caldavHref: varchar('caldav_href', { length: 1024 }),
   caldavEtag: varchar('caldav_etag', { length: 255 }),
+
+  // Set by sync when a single family member's name/alias is found in this
+  // event's title or description (see detectEventPerson). Used only as a
+  // color hint — lower priority than an explicit `color` — and recomputed
+  // on every sync, so it never fights a manual recolor.
+  autoDetectedUserId: uuid('auto_detected_user_id').references(() => users.id, { onDelete: 'set null' }),
 
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),

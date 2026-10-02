@@ -148,7 +148,7 @@ export function formatMealRow(row: {
 
 /**
  * Format an event database row into an API response object.
- * Color priority: event color > group color > user color > calendar color > family default.
+ * Color priority: event color > auto-detected person > group color > user color > calendar color > family default.
  */
 export function formatEventRow(row: {
   id: string;
@@ -169,10 +169,15 @@ export function formatEventRow(row: {
   calendarSourceIsFamily?: boolean | null;
   userColor?: string | null;
   groupColor?: string | null;
+  // Joined from events.autoDetectedUserId — a name/alias match found in this
+  // event's text, set by sync. Lower priority than any explicit color so a
+  // manual recolor always wins.
+  autoDetectedColor?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }) {
   let eventColor = row.color;
+  if (!eventColor && row.autoDetectedColor) eventColor = row.autoDetectedColor;
   if (!eventColor && row.groupColor) eventColor = row.groupColor;
   if (!eventColor && row.userColor) eventColor = row.userColor;
   if (!eventColor && row.calendarSourceColor) eventColor = row.calendarSourceColor;
