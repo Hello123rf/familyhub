@@ -71,21 +71,34 @@ export async function consumeOAuthState(
   expectedUserId: string,
 ): Promise<ConsumeOAuthStateResult> {
   const redis = await getRedisClient();
-  if (!redis) return { status: 'unavailable' };
-  if (!nonce) return { status: 'invalid' };
+  if (!redis) {
+    console.warn(`[oauthState] ${provider}: Redis unavailable, proceeding degraded`);
+    return { status: 'unavailable' };
+  }
+  if (!nonce) {
+    console.warn(`[oauthState] ${provider}: callback arrived with no state param at all`);
+    return { status: 'invalid' };
+  }
 
   const key = stateKey(provider, nonce);
   const stored = await redis.get(key);
-  if (!stored) return { status: 'invalid' };
+  if (!stored) {
+    console.warn(`[oauthState] ${provider}: nonce not found in Redis (expired >${OAUTH_STATE_TTL}s, already consumed, or never created)`);
+    return { status: 'invalid' };
+  }
 
   let payload: Record<string, unknown>;
   try {
     payload = JSON.parse(stored) as Record<string, unknown>;
   } catch {
+    console.warn(`[oauthState] ${provider}: stored nonce payload failed to parse`);
     return { status: 'invalid' };
   }
 
-  if (payload.userId !== expectedUserId) return { status: 'invalid' };
+  if (payload.userId !== expectedUserId) {
+    console.warn(`[oauthState] ${provider}: nonce belongs to a different session (bound to ${payload.userId}, callback is ${expectedUserId})`);
+    return { status: 'invalid' };
+  }
 
   await redis.del(key);
   return { status: 'ok', payload };
