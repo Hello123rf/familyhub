@@ -12,6 +12,7 @@ import { CollapsibleSubSection } from '../shared/CollapsibleSubSection';
 import { GoogleCredentialsForm } from './GoogleCredentialsForm';
 import { GoogleManualTokenForm } from './GoogleManualTokenForm';
 import { browserOAuthUsable } from '@/lib/utils/googleRedirectSupport';
+import { navigateOnce } from '@/lib/utils/navigateOnce';
 import type { IntegrationStatus } from '../shared/useIntegrationStatus';
 import type { ConnectionStatus } from '../shared/ConnectionStatusBadge';
 import { connectedAsLabel } from '../shared/connectedAs';
@@ -46,11 +47,10 @@ const GoogleIcon = () => (
 );
 
 const handleConnect = () => {
-  window.location.href = '/api/auth/google?returnSection=integrations';
+  navigateOnce('/api/auth/google?returnSection=integrations');
 };
 const handleReauth = () => {
-  window.location.href =
-    '/api/auth/google?reauth=all&returnSection=integrations';
+  navigateOnce('/api/auth/google?reauth=all&returnSection=integrations');
 };
 
 export function GoogleProviderCard({

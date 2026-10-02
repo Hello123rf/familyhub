@@ -14,6 +14,7 @@ import {
   ConfirmDialog,
 } from './integrations/components';
 import { KrogerConnectionCard } from './KrogerConnectionCard';
+import { navigateOnce } from '@/lib/utils/navigateOnce';
 
 interface ShoppingIntegrationsSectionProps {
   /** Hide section header + Kroger card when rendered inside a Microsoft card sub-section. */
@@ -31,7 +32,7 @@ export function ShoppingIntegrationsSection({
     if (embedded) {
       // Embedded in the Microsoft card — provider is implicit. Skip the
       // ProviderPickerModal and go straight to MS OAuth.
-      window.location.href = `/api/auth/microsoft-tasks?shoppingListId=${entityId}&returnSection=integrations`;
+      navigateOnce(`/api/auth/microsoft-tasks?shoppingListId=${entityId}&returnSection=integrations`);
     } else {
       integration.handleConnectProvider(entityId);
     }
@@ -103,7 +104,7 @@ export function ShoppingIntegrationsSection({
         onSelectMsTodo={() => {
           integration.setShowProviderPickerModal(false);
           if (integration.connectingEntityId) {
-            window.location.href = `/api/auth/microsoft-tasks?shoppingListId=${integration.connectingEntityId}&returnSection=shopping`;
+            navigateOnce(`/api/auth/microsoft-tasks?shoppingListId=${integration.connectingEntityId}&returnSection=shopping`);
           }
         }}
       />

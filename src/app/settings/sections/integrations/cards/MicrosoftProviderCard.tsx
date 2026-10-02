@@ -14,6 +14,7 @@ import type { ConnectionStatus } from '../shared/ConnectionStatusBadge';
 import { MicrosoftCredentialsForm } from './MicrosoftCredentialsForm';
 import { connectedAsLabel } from '../shared/connectedAs';
 import { useOAuthConfigStatus } from '../shared/useOAuthConfigStatus';
+import { navigateOnce } from '@/lib/utils/navigateOnce';
 import { TaskIntegrationsSection } from '../../TaskIntegrationsSection';
 import { ShoppingIntegrationsSection } from '../../ShoppingIntegrationsSection';
 import { WishListIntegrationsSection } from '../../WishListIntegrationsSection';
@@ -39,7 +40,7 @@ const handleConnect = () => {
   // Tells /api/auth/microsoft/callback to route back to the consolidated
   // Integrations page (with the OneDrive sub-section auto-expanded) instead
   // of the legacy ?section=photos default.
-  window.location.href = '/api/auth/microsoft?returnSection=integrations';
+  navigateOnce('/api/auth/microsoft?returnSection=integrations');
 };
 
 // Re-auth re-uses the same init route — Microsoft's OAuth refreshes

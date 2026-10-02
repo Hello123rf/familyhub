@@ -34,6 +34,7 @@ import {
   ConfirmDialog,
 } from './integrations/components';
 import { browserOAuthUsable } from '@/lib/utils/googleRedirectSupport';
+import { navigateOnce } from '@/lib/utils/navigateOnce';
 
 interface TaskIntegrationsSectionProps {
   /** Hide the section header (h2 + description) when rendered inside a card sub-section. */
@@ -81,9 +82,9 @@ export function TaskIntegrationsSection({
 
   const handleConnectEntity = (entityId: string) => {
     if (providerFilter === 'microsoft_todo') {
-      window.location.href = `/api/auth/microsoft-tasks?taskListId=${entityId}&returnSection=integrations`;
+      navigateOnce(`/api/auth/microsoft-tasks?taskListId=${entityId}&returnSection=integrations`);
     } else if (providerFilter === 'google_tasks') {
-      window.location.href = `/api/auth/google-tasks?taskListId=${entityId}&returnSection=integrations`;
+      navigateOnce(`/api/auth/google-tasks?taskListId=${entityId}&returnSection=integrations`);
     } else {
       integration.handleConnectProvider(entityId);
     }
@@ -480,13 +481,13 @@ export function TaskIntegrationsSection({
         onSelectMsTodo={msConfigured ? () => {
           integration.setShowProviderPickerModal(false);
           if (integration.connectingEntityId) {
-            window.location.href = `/api/auth/microsoft-tasks?taskListId=${integration.connectingEntityId}`;
+            navigateOnce(`/api/auth/microsoft-tasks?taskListId=${integration.connectingEntityId}`);
           }
         } : undefined}
         onSelectGoogleTasks={googleConfigured ? () => {
           integration.setShowProviderPickerModal(false);
           if (integration.connectingEntityId) {
-            window.location.href = `/api/auth/google-tasks?taskListId=${integration.connectingEntityId}`;
+            navigateOnce(`/api/auth/google-tasks?taskListId=${integration.connectingEntityId}`);
           }
         } : undefined}
         disabledProviders={[

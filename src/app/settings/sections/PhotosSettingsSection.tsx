@@ -12,6 +12,7 @@ import { useDisplayContextFilters, useTargetResolution } from '../SettingsView';
 import { usePinnedPhoto } from '@/components/layout/WallpaperBackground';
 import { usePhotos } from '@/lib/hooks/usePhotos';
 import { toast } from '@/components/ui/use-toast';
+import { navigateOnce } from '@/lib/utils/navigateOnce';
 
 interface PhotoSource {
   id: string;
@@ -471,7 +472,7 @@ export function PhotosSettingsSection() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => { window.location.href = '/api/auth/microsoft'; }}
+                            onClick={() => navigateOnce('/api/auth/microsoft')}
                             className="text-xs h-8 text-muted-foreground"
                             title="Re-authenticate with Microsoft"
                           >
@@ -572,7 +573,7 @@ export function PhotosSettingsSection() {
               {/* Connect OneDrive CTA if no OneDrive source exists */}
               {!sources.some((s) => s.type === 'onedrive') && (
                 <button
-                  onClick={() => { window.location.href = '/api/auth/microsoft'; }}
+                  onClick={() => navigateOnce('/api/auth/microsoft')}
                   className="flex items-center gap-3 w-full p-3 rounded-lg border border-dashed hover:bg-muted/50 transition-colors text-sm text-muted-foreground hover:text-foreground"
                 >
                   <Cloud className="h-5 w-5 text-blue-500" />

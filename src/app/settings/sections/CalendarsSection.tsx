@@ -17,6 +17,7 @@ import { useFamily } from '@/components/providers';
 import { CalendarColorPicker } from '../components/CalendarColorPicker';
 import { useHiddenHours } from '@/lib/hooks/useHiddenHours';
 import { useOAuthConfigStatus } from './integrations/shared/useOAuthConfigStatus';
+import { navigateOnce } from '@/lib/utils/navigateOnce';
 
 export function CalendarsSection({ onSynced }: { onSynced?: () => void } = {}) {
   const { confirm, dialogProps: confirmDialogProps } = useConfirmDialog();
@@ -346,7 +347,7 @@ export function CalendarsSection({ onSynced }: { onSynced?: () => void } = {}) {
                     className="border-warning/50 text-warning hover:bg-warning/10"
                     onClick={() => {
                       const firstGoogle = manageableCalendars.find((c) => c.provider === 'google');
-                      if (firstGoogle) window.location.href = `/api/auth/google?reauth=${firstGoogle.id}&returnSection=calendars`;
+                      if (firstGoogle) navigateOnce(`/api/auth/google?reauth=${firstGoogle.id}&returnSection=calendars`);
                     }}
                   >
                     Re-authenticate Google

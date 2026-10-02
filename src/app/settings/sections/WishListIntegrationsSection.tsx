@@ -5,6 +5,7 @@ import { useFamily } from '@/components/providers/FamilyProvider';
 import { useIntegrationSources } from './integrations/useIntegrationSources';
 import { WISH_CONFIG } from './integrations/constants';
 import type { WishItemSource } from './integrations/types';
+import { navigateOnce } from '@/lib/utils/navigateOnce';
 import {
   StatusBanner,
   ConnectedSourcesCard,
@@ -28,7 +29,7 @@ export function WishListIntegrationsSection({
 
   const handleConnectEntity = (entityId: string) => {
     if (embedded) {
-      window.location.href = `/api/auth/microsoft-tasks?wishMemberId=${entityId}&returnSection=integrations`;
+      navigateOnce(`/api/auth/microsoft-tasks?wishMemberId=${entityId}&returnSection=integrations`);
     } else {
       integration.handleConnectProvider(entityId);
     }
@@ -96,7 +97,7 @@ export function WishListIntegrationsSection({
         onSelectMsTodo={() => {
           integration.setShowProviderPickerModal(false);
           if (integration.connectingEntityId) {
-            window.location.href = `/api/auth/microsoft-tasks?wishMemberId=${integration.connectingEntityId}&returnSection=wish`;
+            navigateOnce(`/api/auth/microsoft-tasks?wishMemberId=${integration.connectingEntityId}&returnSection=wish`);
           }
         }}
       />
