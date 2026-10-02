@@ -104,5 +104,6 @@ export async function consumeOAuthState(
   }
 
   await redis.del(key);
+  console.warn(`[oauthState] ${provider}: nonce ${nonce} consumed OK for session ${expectedUserId}`);
   return { status: 'ok', payload };
 }
