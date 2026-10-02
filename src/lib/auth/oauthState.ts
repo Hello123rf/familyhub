@@ -45,6 +45,9 @@ export async function createOAuthState(
       OAUTH_STATE_TTL,
       JSON.stringify({ userId, ...payload }),
     );
+    console.warn(`[oauthState] ${provider}: created nonce ${nonce} for session ${userId}`);
+  } else {
+    console.warn(`[oauthState] ${provider}: Redis unavailable at creation — nonce ${nonce} returned but won't verify later`);
   }
   return nonce;
 }
@@ -83,7 +86,7 @@ export async function consumeOAuthState(
   const key = stateKey(provider, nonce);
   const stored = await redis.get(key);
   if (!stored) {
-    console.warn(`[oauthState] ${provider}: nonce not found in Redis (expired >${OAUTH_STATE_TTL}s, already consumed, or never created)`);
+    console.warn(`[oauthState] ${provider}: nonce ${nonce} not found in Redis (expired >${OAUTH_STATE_TTL}s, already consumed, or never created)`);
     return { status: 'invalid' };
   }
 
@@ -96,7 +99,7 @@ export async function consumeOAuthState(
   }
 
   if (payload.userId !== expectedUserId) {
-    console.warn(`[oauthState] ${provider}: nonce belongs to a different session (bound to ${payload.userId}, callback is ${expectedUserId})`);
+    console.warn(`[oauthState] ${provider}: nonce ${nonce} belongs to a different session (bound to ${payload.userId}, callback is ${expectedUserId})`);
     return { status: 'invalid' };
   }
 
