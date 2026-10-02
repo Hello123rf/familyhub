@@ -18,6 +18,7 @@ import {
   TOMORROW_FORECAST_HOURS,
   type TomorrowForecastHour,
 } from '@/lib/integrations/tomorrowRadar';
+import { getTomorrowRadarApiKey } from '@/lib/integrations/credentialStore';
 import { getCached } from '@/lib/cache/redis';
 import { logError } from '@/lib/utils/logError';
 
@@ -26,7 +27,7 @@ import { logError } from '@/lib/utils/logError';
 const TILE_CACHE_TTL = 50 * 60;
 
 export async function GET(request: NextRequest) {
-  const apiKey = process.env.TOMORROW_IO_API_KEY;
+  const apiKey = await getTomorrowRadarApiKey();
   if (!apiKey) {
     return new NextResponse('Not configured', { status: 404 });
   }

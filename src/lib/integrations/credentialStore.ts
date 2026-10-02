@@ -83,6 +83,14 @@ export async function getWeatherApiKey(): Promise<string | null> {
   return process.env.OPENWEATHER_API_KEY ?? null;
 }
 
+export async function getTomorrowRadarApiKey(): Promise<string | null> {
+  const stored = await getSetting('credentials.tomorrowRadar');
+  if (stored?.apiKey) {
+    return safeDecrypt(stored.apiKey) ?? stored.apiKey;
+  }
+  return process.env.TOMORROW_IO_API_KEY ?? null;
+}
+
 export async function getKrogerCredentials(): Promise<KrogerCredentials | null> {
   const stored = await getSetting('credentials.kroger');
   if (stored?.clientId) {

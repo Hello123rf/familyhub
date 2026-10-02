@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Sun, Moon, Monitor, Share2, Store } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { useTheme } from '@/components/providers';
@@ -279,6 +280,7 @@ export function DisplaySection() {
       <TimersCard />
 
       <WeatherUnitsCard />
+      <WeatherAlertsRadarCard />
 
       <LanguageCard />
 
@@ -402,6 +404,143 @@ function WeatherUnitsCard() {
           >
             Metric (°C, km/h)
           </button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
+ * Severe weather alert country (MeteoAlarm) and the Tomorrow.io forecast-
+ * radar API key — both otherwise only settable via .env + a container
+ * restart. Free text for the country rather than a hardcoded dropdown of
+ * MeteoAlarm's ~30 supported countries, since getting that list wrong is
+ * worse than just linking to their own feed index to confirm the slug.
+ */
+function WeatherAlertsRadarCard() {
+  const [country, setCountry] = useState('');
+  const [countrySaving, setCountrySaving] = useState(false);
+  const [countrySavedAt, setCountrySavedAt] = useState(0);
+
+  const [apiKey, setApiKey] = useState('');
+  const [radarConfigured, setRadarConfigured] = useState(false);
+  const [keySaving, setKeySaving] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/settings')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        const value = data?.settings?.weatherAlerts as { country?: string } | undefined;
+        if (value?.country) setCountry(value.country);
+      })
+      .catch(() => {});
+
+    fetch('/api/weather/radar/forecast')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => setRadarConfigured(!!data?.configured))
+      .catch(() => {});
+  }, []);
+
+  const saveCountry = useCallback(async () => {
+    setCountrySaving(true);
+    try {
+      await fetch('/api/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: 'weatherAlerts', value: { country: country.trim().toLowerCase() } }),
+      });
+      setCountrySavedAt(Date.now());
+    } catch { /* ignore */ }
+    setCountrySaving(false);
+  }, [country]);
+
+  const saveApiKey = useCallback(async () => {
+    if (!apiKey.trim()) return;
+    setKeySaving(true);
+    try {
+      const res = await fetch('/api/setup/credentials/tomorrow-radar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey: apiKey.trim() }),
+      });
+      if (res.ok) {
+        setRadarConfigured(true);
+        setApiKey('');
+      }
+    } catch { /* ignore */ }
+    setKeySaving(false);
+  }, [apiKey]);
+
+  const removeApiKey = useCallback(async () => {
+    setKeySaving(true);
+    try {
+      const res = await fetch('/api/setup/credentials/tomorrow-radar', { method: 'DELETE' });
+      if (res.ok) setRadarConfigured(false);
+    } catch { /* ignore */ }
+    setKeySaving(false);
+  }, []);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Weather alerts &amp; forecast radar</CardTitle>
+        <CardDescription>
+          Severe weather alerts and the Weather page&apos;s forecast radar tab — both optional.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium">Alert country (MeteoAlarm)</label>
+          <div className="flex gap-2">
+            <Input
+              value={country}
+              onChange={(e) => setCountry(e.target.value)}
+              placeholder="denmark"
+              className="max-w-xs"
+            />
+            <Button size="sm" variant="outline" disabled={countrySaving} onClick={saveCountry}>
+              {countrySaving ? 'Saving…' : countrySavedAt ? 'Saved' : 'Save'}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Lowercase, hyphenated, matching{' '}
+            <a href="https://feeds.meteoalarm.org/" target="_blank" rel="noreferrer" className="underline">
+              MeteoAlarm&apos;s own feed slugs
+            </a>{' '}
+            (e.g. &quot;denmark&quot;, &quot;united-kingdom&quot;). Leave blank to turn alerts off.
+          </p>
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium">Tomorrow.io API key (forecast radar)</label>
+          {radarConfigured ? (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-success">Key saved — Forecast tab is enabled.</span>
+              <Button size="sm" variant="outline" disabled={keySaving} onClick={removeApiKey}>
+                Remove
+              </Button>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <Input
+                type="password"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder="your-tomorrow-io-api-key"
+                className="max-w-xs"
+              />
+              <Button size="sm" variant="outline" disabled={keySaving || !apiKey.trim()} onClick={saveApiKey}>
+                {keySaving ? 'Saving…' : 'Save'}
+              </Button>
+            </div>
+          )}
+          <p className="text-xs text-muted-foreground">
+            Free signup, no credit card, at{' '}
+            <a href="https://www.tomorrow.io/weather-api/" target="_blank" rel="noreferrer" className="underline">
+              tomorrow.io
+            </a>
+            . Their free plan is rate-limited, so this only shows a short now/+1h/+2h forecast.
+          </p>
         </div>
       </CardContent>
     </Card>

@@ -4,13 +4,17 @@
  * ENDPOINT: /api/weather/alerts
  *   GET — current in-force alerts for the configured country.
  *
- * Country is set via WEATHER_ALERT_COUNTRY (e.g. "denmark"), matching
- * MeteoAlarm's own feed slugs — see lib/integrations/meteoalarm.ts. Absent
- * means the feature is simply off: `configured: false`, no error.
+ * Country comes from the `weatherAlerts` DB setting (Settings -> Display)
+ * if set, else the WEATHER_ALERT_COUNTRY env var (e.g. "denmark"), matching
+ * MeteoAlarm's own feed slugs — see lib/integrations/meteoalarm.ts. Neither
+ * set means the feature is simply off: `configured: false`, no error.
  */
 
 import { NextResponse } from 'next/server';
 import { optionalAuth } from '@/lib/auth';
+import { db } from '@/lib/db/client';
+import { settings } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
 import { fetchSevereWeatherAlerts } from '@/lib/integrations/meteoalarm';
 import { getCached } from '@/lib/cache/redis';
 import { logError } from '@/lib/utils/logError';
@@ -19,10 +23,19 @@ import { logError } from '@/lib/utils/logError';
 // fresh without hammering MeteoAlarm on every dashboard poll.
 const ALERTS_CACHE_TTL = 15 * 60;
 
+async function resolveAlertCountry(): Promise<string | null> {
+  try {
+    const [row] = await db.select().from(settings).where(eq(settings.key, 'weatherAlerts'));
+    const stored = (row?.value as { country?: string } | undefined)?.country?.trim().toLowerCase();
+    if (stored) return stored;
+  } catch { /* fall through to env */ }
+  return process.env.WEATHER_ALERT_COUNTRY?.trim().toLowerCase() || null;
+}
+
 export async function GET() {
   const _auth = await optionalAuth();
 
-  const country = process.env.WEATHER_ALERT_COUNTRY?.trim().toLowerCase();
+  const country = await resolveAlertCountry();
   if (!country) {
     return NextResponse.json({ alerts: [], configured: false });
   }

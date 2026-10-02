@@ -9,9 +9,10 @@
 
 import { NextResponse } from 'next/server';
 import { TOMORROW_FORECAST_HOURS } from '@/lib/integrations/tomorrowRadar';
+import { getTomorrowRadarApiKey } from '@/lib/integrations/credentialStore';
 
 export async function GET() {
-  const configured = !!process.env.TOMORROW_IO_API_KEY;
+  const configured = !!(await getTomorrowRadarApiKey());
 
   return NextResponse.json({
     configured,
