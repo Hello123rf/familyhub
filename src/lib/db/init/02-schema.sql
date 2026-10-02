@@ -515,7 +515,8 @@ CREATE TABLE IF NOT EXISTS public.photos (
     latitude numeric(9,6),
     longitude numeric(10,6),
     is_external boolean DEFAULT false NOT NULL,
-    dedupe_key character varying(120)
+    dedupe_key character varying(120),
+    pending_deletion timestamp without time zone
 );
 
 

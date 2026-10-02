@@ -8,7 +8,8 @@
 // --- DB mock ---
 const mockFindFirst = jest.fn();
 const mockSelectFrom = jest.fn();
-const mockInsertValues = jest.fn().mockResolvedValue(undefined);
+const mockOnConflictDoNothing = jest.fn().mockResolvedValue(undefined);
+const mockInsertValues = jest.fn().mockReturnValue({ onConflictDoNothing: mockOnConflictDoNothing });
 const mockDeleteWhere = jest.fn().mockResolvedValue(undefined);
 const mockUpdateSetWhere = jest.fn().mockResolvedValue(undefined);
 
@@ -27,13 +28,14 @@ jest.mock('@/lib/db/client', () => ({
 }));
 
 jest.mock('@/lib/db/schema', () => ({
-  photos: { id: 'id', sourceId: 'sourceId', filename: 'filename', externalId: 'externalId' },
+  photos: { id: 'id', sourceId: 'sourceId', filename: 'filename', externalId: 'externalId', pendingDeletion: 'pendingDeletion' },
   photoSources: { id: 'id', type: 'type' },
   excludedPhotos: { id: 'id', sourceId: 'sourceId', externalId: 'externalId' },
 }));
 
 jest.mock('drizzle-orm', () => ({
   eq: jest.fn(),
+  inArray: jest.fn((_col: unknown, ids: unknown[]) => ({ inArray: ids })),
 }));
 
 // --- OneDrive mock ---
@@ -183,16 +185,54 @@ describe('syncOneDriveSource', () => {
     expect(mockSavePhoto).not.toHaveBeenCalled();
   });
 
-  it('deletes local photos removed from remote', async () => {
+  it('flags (does not delete) a photo missing on its first sync after going missing', async () => {
     mockListPhotos.mockResolvedValue([]); // empty remote
     mockSelectFrom.mockResolvedValue([
-      { id: 'db-1', externalId: 'remote-gone', filename: 'old.jpg', thumbnailPath: 'thumb_old.jpg' },
+      { id: 'db-1', externalId: 'remote-gone', filename: 'old.jpg', thumbnailPath: 'thumb_old.jpg', pendingDeletion: null },
+    ]);
+
+    await syncOneDriveSource('source-1');
+
+    expect(mockDeletePhoto).not.toHaveBeenCalled();
+    expect(mockDeleteWhere).not.toHaveBeenCalled();
+    // Flagged via an update, not deleted
+    expect(mockUpdateSetWhere).toHaveBeenCalled();
+  });
+
+  it('finalizes (deletes) a photo still missing a full grace period after being flagged', async () => {
+    mockListPhotos.mockResolvedValue([]); // still empty remote
+    mockSelectFrom.mockResolvedValue([
+      {
+        id: 'db-1',
+        externalId: 'remote-gone',
+        filename: 'old.jpg',
+        thumbnailPath: 'thumb_old.jpg',
+        pendingDeletion: new Date(Date.now() - 30 * 60 * 1000), // flagged 30 min ago
+      },
     ]);
 
     await syncOneDriveSource('source-1');
 
     expect(mockDeletePhoto).toHaveBeenCalledWith('old.jpg', 'thumb_old.jpg');
+    expect(mockOnConflictDoNothing).toHaveBeenCalled(); // tombstoned first
     expect(mockDeleteWhere).toHaveBeenCalled();
+  });
+
+  it('does not flag or delete anything when too many photos go missing at once', async () => {
+    mockListPhotos.mockResolvedValue([]); // empty remote
+    const manyMissing = Array.from({ length: 20 }, (_, i) => ({
+      id: `db-${i}`,
+      externalId: `remote-${i}`,
+      filename: `old-${i}.jpg`,
+      thumbnailPath: null,
+      pendingDeletion: null,
+    }));
+    mockSelectFrom.mockResolvedValue(manyMissing);
+
+    await syncOneDriveSource('source-1');
+
+    expect(mockDeletePhoto).not.toHaveBeenCalled();
+    expect(mockDeleteWhere).not.toHaveBeenCalled();
   });
 
   it('refreshes token when expired', async () => {
@@ -390,7 +430,7 @@ describe('syncImmichSource', () => {
     expect(mockInsertValues).not.toHaveBeenCalled();
   });
 
-  it('removes photos no longer in the album and clears their cache', async () => {
+  it('flags (does not delete) a photo missing on its first sync after going missing', async () => {
     mockFetchSharedLink.mockResolvedValue({
       albumId: 'album-1',
       albumName: null,
@@ -399,12 +439,37 @@ describe('syncImmichSource', () => {
       assets: [],
     });
     mockSelectFrom.mockResolvedValue([
-      { id: 'photo-1', externalId: 'gone-asset', latitude: null, longitude: null },
+      { id: 'photo-1', externalId: 'gone-asset', latitude: null, longitude: null, pendingDeletion: null },
+    ]);
+
+    await syncImmichSource('immich-source-1');
+
+    expect(mockClearPhotoCache).not.toHaveBeenCalled();
+    expect(mockDeleteWhere).not.toHaveBeenCalled();
+  });
+
+  it('finalizes (removes + clears cache) a photo still missing a full grace period after being flagged', async () => {
+    mockFetchSharedLink.mockResolvedValue({
+      albumId: 'album-1',
+      albumName: null,
+      allowDownload: true,
+      hasPassword: false,
+      assets: [],
+    });
+    mockSelectFrom.mockResolvedValue([
+      {
+        id: 'photo-1',
+        externalId: 'gone-asset',
+        latitude: null,
+        longitude: null,
+        pendingDeletion: new Date(Date.now() - 30 * 60 * 1000),
+      },
     ]);
 
     await syncImmichSource('immich-source-1');
 
     expect(mockClearPhotoCache).toHaveBeenCalledWith('immich-source-1', 'gone-asset');
+    expect(mockOnConflictDoNothing).toHaveBeenCalled();
     expect(mockDeleteWhere).toHaveBeenCalled();
   });
 

@@ -1,6 +1,6 @@
 import { db } from '@/lib/db/client';
 import { photos, photoSources, excludedPhotos } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import {
   listPhotosInFolder,
   downloadPhoto,
@@ -13,6 +13,84 @@ import { promises as fs } from 'fs';
 import { decrypt, encrypt } from '@/lib/utils/crypto';
 import exifr from 'exifr';
 import { orientationFromDimensions } from '@/lib/utils/photoOrientation';
+import { decideDeletionReview } from './taskDeletionReview';
+
+/**
+ * How long a synced photo must have been absent before it's actually deleted.
+ * Matches the calendar-events pattern: one missing listing flags it (hidden
+ * from display, recoverable), a second miss a full grace period later
+ * finalizes it. Set just under the 30-minute photo-sync cron interval so two
+ * separate runs are required, not two checks within the same run.
+ */
+const PHOTO_MISSING_GRACE_MS = 25 * 60 * 1000;
+
+interface MissingPhotoRow {
+  id: string;
+  sourceId: string;
+  externalId: string | null;
+  filename: string;
+  thumbnailPath: string | null;
+  pendingDeletion: Date | null;
+}
+
+/**
+ * Apply grace-period + mass-delete-guard deletion handling to a photo sync's
+ * missing set — see applyEventDeletionReview in calendar-sync.ts for the
+ * original pattern this mirrors. Without this, a single bad/empty listing
+ * from OneDrive or Immich (an auth hiccup, a renamed folder, a transient 5xx)
+ * would previously delete every photo in that source immediately and
+ * permanently, with no recovery.
+ *
+ * @param onFinalize - per-photo cleanup of cached/downloaded bytes, since
+ *   OneDrive (local file + thumbnail) and Immich (proxy cache) store
+ *   differently.
+ */
+async function applyPhotoDeletionReview(
+  missing: MissingPhotoRow[],
+  syncedCount: number,
+  sourceLabel: string,
+  onFinalize: (photo: MissingPhotoRow) => Promise<void>,
+): Promise<{ flagged: number; finalized: number }> {
+  if (missing.length === 0) return { flagged: 0, finalized: 0 };
+
+  const review = decideDeletionReview({ syncedCount, missingCount: missing.length });
+
+  if (review.guardTripped) {
+    console.error(
+      `[PhotoSync] ${review.withheld} ${sourceLabel} photos missing at once — too many to be a normal ` +
+      'change, so none were touched. Check the connection, then sync again.',
+    );
+    return { flagged: 0, finalized: 0 };
+  }
+  if (!review.flag) return { flagged: 0, finalized: 0 };
+
+  const nowTs = Date.now();
+  const toFlag = missing.filter((p) => !p.pendingDeletion).map((p) => p.id);
+  const toFinalize = missing.filter(
+    (p) => p.pendingDeletion && nowTs - p.pendingDeletion.getTime() > PHOTO_MISSING_GRACE_MS,
+  );
+
+  if (toFlag.length > 0) {
+    await db.update(photos).set({ pendingDeletion: new Date() }).where(inArray(photos.id, toFlag));
+  }
+
+  if (toFinalize.length > 0) {
+    // Tombstone first (so a later sync can't resurrect it), matching the
+    // manual "remove from Prism" action.
+    for (const p of toFinalize) {
+      if (p.externalId) {
+        await db
+          .insert(excludedPhotos)
+          .values({ sourceId: p.sourceId, externalId: p.externalId })
+          .onConflictDoNothing();
+      }
+      await onFinalize(p);
+    }
+    await db.delete(photos).where(inArray(photos.id, toFinalize.map((p) => p.id)));
+  }
+
+  return { flagged: toFlag.length, finalized: toFinalize.length };
+}
 
 async function extractGps(buffer: Buffer): Promise<{ latitude: string; longitude: string } | null> {
   try {
@@ -207,13 +285,22 @@ export async function syncOneDriveSource(sourceId: string) {
     }
   }
 
-  // Remove photos that no longer exist remotely
-  for (const existing of existingPhotos) {
-    if (existing.externalId && !remoteIds.has(existing.externalId)) {
-      await deletePhoto(existing.filename, existing.thumbnailPath);
-      await db.delete(photos).where(eq(photos.id, existing.id));
-    }
+  // Clear the pending-deletion flag on any photo that reappeared in the source.
+  const reappeared = existingPhotos
+    .filter((p) => p.pendingDeletion && p.externalId && remoteIds.has(p.externalId))
+    .map((p) => p.id);
+  if (reappeared.length > 0) {
+    await db.update(photos).set({ pendingDeletion: null }).where(inArray(photos.id, reappeared));
   }
+
+  // Photos no longer listed remotely — flagged first, deleted only after a
+  // full grace period still missing. See applyPhotoDeletionReview.
+  const missingPhotos = existingPhotos.filter(
+    (p) => p.externalId && !remoteIds.has(p.externalId),
+  );
+  await applyPhotoDeletionReview(missingPhotos, existingPhotos.length, 'OneDrive', async (p) => {
+    await deletePhoto(p.filename, p.thumbnailPath);
+  });
 
   // Update last synced
   await db
@@ -356,13 +443,22 @@ export async function syncImmichSource(sourceId: string) {
       .where(eq(photos.id, existing.id));
   }
 
-  // Remove photos no longer in the album, including any cached bytes.
-  for (const existing of existingPhotos) {
-    if (existing.externalId && !remoteIds.has(existing.externalId)) {
-      await clearPhotoCache(sourceId, existing.externalId);
-      await db.delete(photos).where(eq(photos.id, existing.id));
-    }
+  // Clear the pending-deletion flag on any photo that reappeared in the album.
+  const reappeared = existingPhotos
+    .filter((p) => p.pendingDeletion && p.externalId && remoteIds.has(p.externalId))
+    .map((p) => p.id);
+  if (reappeared.length > 0) {
+    await db.update(photos).set({ pendingDeletion: null }).where(inArray(photos.id, reappeared));
   }
+
+  // Photos no longer in the album — flagged first, deleted only after a full
+  // grace period still missing. See applyPhotoDeletionReview.
+  const missingPhotos = existingPhotos.filter(
+    (p) => p.externalId && !remoteIds.has(p.externalId),
+  );
+  await applyPhotoDeletionReview(missingPhotos, existingPhotos.length, 'Immich', async (p) => {
+    if (p.externalId) await clearPhotoCache(sourceId, p.externalId);
+  });
 
   await db
     .update(photoSources)

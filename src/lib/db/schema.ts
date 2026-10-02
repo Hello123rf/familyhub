@@ -1362,6 +1362,12 @@ export const photos = pgTable('photos', {
   // dedup groups by this key and keeps the lowest source.priority copy.
   dedupeKey: varchar('dedupe_key', { length: 120 }),
 
+  // Set when sync finds this synced photo gone from its source. Matches the
+  // calendar-events grace-period pattern: flagged (hidden from display) on
+  // the first miss, deleted only if still missing a full grace period later.
+  // Null = not pending. Local uploads (no externalId) never get flagged.
+  pendingDeletion: timestamp('pending_deletion'),
+
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (table) => ({
   sourceIdIdx: index('photos_source_id_idx').on(table.sourceId),

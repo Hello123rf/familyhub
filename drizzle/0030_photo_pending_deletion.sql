@@ -1,0 +1,1 @@
+ALTER TABLE photos ADD COLUMN IF NOT EXISTS pending_deletion TIMESTAMP;

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, getDisplayAuth } from '@/lib/auth';
 import { db } from '@/lib/db/client';
 import { photos, photoSources } from '@/lib/db/schema';
-import { eq, desc, sql, and, like } from 'drizzle-orm';
+import { eq, desc, sql, and, like, isNull } from 'drizzle-orm';
 import { savePhoto } from '@/lib/services/photo-storage';
 import { PHOTO_MAX_SIZE_MB, PHOTO_ALLOWED_TYPES } from '@/lib/constants';
 import { validateMagicBytes } from '@/lib/utils/validateFileType';
@@ -44,7 +44,10 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(searchParams.get('offset') || '0', 10);
 
     const runQuery = async () => {
-      const conditions = [];
+      // Flagged-pending-deletion photos are hidden from display the moment
+      // sync notices them missing from the source — see
+      // applyPhotoDeletionReview in photo-sync.ts for when this clears.
+      const conditions = [isNull(photos.pendingDeletion)];
       if (sourceId) conditions.push(eq(photos.sourceId, sourceId));
       if (favorite === 'true') conditions.push(eq(photos.favorite, true));
       if (orientation) conditions.push(eq(photos.orientation, orientation as 'landscape' | 'portrait' | 'square'));
