@@ -3,7 +3,7 @@ import { voiceOk, voiceError } from '@/lib/api/voiceResponse';
 import { phraseEventList } from '@/lib/api/voicePhrases';
 import { db } from '@/lib/db/client';
 import { events } from '@/lib/db/schema';
-import { and, gte, lt, asc } from 'drizzle-orm';
+import { and, gte, lt, asc, isNull } from 'drizzle-orm';
 import { logError } from '@/lib/utils/logError';
 
 /**
@@ -30,7 +30,7 @@ export async function GET() {
           location: events.location,
         })
         .from(events)
-        .where(and(gte(events.startTime, dayStart), lt(events.startTime, dayEnd)))
+        .where(and(gte(events.startTime, dayStart), lt(events.startTime, dayEnd), isNull(events.pendingDeletion)))
         .orderBy(asc(events.startTime));
 
       const spoken = phraseEventList(todayEvents);

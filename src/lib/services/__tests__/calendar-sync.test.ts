@@ -19,7 +19,11 @@ const mockUpdate = jest.fn();
 const mockDelete = jest.fn();
 
 const mockOnConflictDoUpdate = jest.fn().mockResolvedValue(undefined);
-const mockInsertValues = jest.fn().mockReturnValue({ onConflictDoUpdate: mockOnConflictDoUpdate });
+const mockOnConflictDoNothing = jest.fn().mockResolvedValue(undefined);
+const mockInsertValues = jest.fn().mockReturnValue({
+  onConflictDoUpdate: mockOnConflictDoUpdate,
+  onConflictDoNothing: mockOnConflictDoNothing,
+});
 mockInsert.mockReturnValue({ values: mockInsertValues });
 
 const mockUpdateSet = jest.fn().mockReturnValue({ where: jest.fn().mockResolvedValue(undefined) });
@@ -277,6 +281,53 @@ describe('syncGoogleCalendarSource', () => {
     // Deletes-only review: prism-2 is FLAGGED pending, not hard-deleted.
     expect(mockDelete).not.toHaveBeenCalled();
     expect(mockUpdateSet).toHaveBeenCalledWith(
+      expect.objectContaining({ pendingDeletion: expect.any(Date) }),
+    );
+  });
+
+  it('finalizes (deletes) an event still missing a full grace period after being flagged', async () => {
+    mockFindFirst.mockResolvedValue(makeSource());
+    mockFetchCalendarEvents.mockResolvedValue([]);
+    // prism-2 was already flagged 10 minutes ago (grace period is 6 minutes)
+    // and is still missing from Google on this sync.
+    mockFindMany.mockResolvedValue([
+      {
+        id: 'prism-2',
+        externalEventId: 'event-2',
+        title: 'Deleted from Google',
+        calendarSourceId: 'source-1',
+        pendingDeletion: new Date(Date.now() - 10 * 60 * 1000),
+      },
+    ]);
+
+    await syncGoogleCalendarSource('source-1');
+
+    // Tombstoned first, then hard-deleted - same as the manual "Delete" action.
+    expect(mockInsertValues).toHaveBeenCalledWith(
+      expect.objectContaining({ calendarSourceId: 'source-1', externalEventId: 'event-2' }),
+    );
+    expect(mockDelete).toHaveBeenCalled();
+  });
+
+  it('does not flag or delete anything when too many events go missing at once', async () => {
+    mockFindFirst.mockResolvedValue(makeSource());
+    mockFetchCalendarEvents.mockResolvedValue([]);
+    // 20 local events, all suddenly missing - looks like an outage, not 20
+    // individual deletions. The mass-delete guard should withhold all of them.
+    mockFindMany.mockResolvedValue(
+      Array.from({ length: 20 }, (_, i) => ({
+        id: `prism-${i}`,
+        externalEventId: `event-${i}`,
+        title: `Event ${i}`,
+        calendarSourceId: 'source-1',
+        pendingDeletion: null,
+      })),
+    );
+
+    await syncGoogleCalendarSource('source-1');
+
+    expect(mockDelete).not.toHaveBeenCalled();
+    expect(mockUpdateSet).not.toHaveBeenCalledWith(
       expect.objectContaining({ pendingDeletion: expect.any(Date) }),
     );
   });

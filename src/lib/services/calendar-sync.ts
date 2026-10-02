@@ -2,11 +2,12 @@ import { db } from '@/lib/db/client';
 import { decideDeletionReview } from '@/lib/services/taskDeletionReview';
 
 /**
- * How long a CalDAV task must have been absent before it is flagged. Matches
- * the provider task sync: one missed or partial response cannot flag anything
- * on its own.
+ * How long something must have been absent before it is flagged, and again
+ * before a flag is finalized into an actual delete. Matches the provider
+ * task sync: one missed or partial response cannot flag or delete anything
+ * on its own - two misses, roughly two sync cycles apart, are required.
  */
-const CALDAV_MISSING_GRACE_MS = 6 * 60 * 1000;
+const MISSING_GRACE_MS = 6 * 60 * 1000;
 import { calendarSources, events, tasks, taskLists, dismissedEvents } from '@/lib/db/schema';
 import { eq, and, gte, lte, sql, inArray, isNotNull } from 'drizzle-orm';
 import {
@@ -26,6 +27,88 @@ import { decrypt, encrypt } from '@/lib/utils/crypto';
 import { validatePublicUrl, UnsafeUrlError } from '@/lib/utils/safeFetch';
 import { isGoogleCalendarWebLink, GOOGLE_WEB_LINK_ERROR } from '@/lib/utils/googleCalendarLink';
 import { async as icalAsync, type VEvent, type CalendarResponse } from 'node-ical';
+
+/**
+ * Shape needed to decide and apply deletion handling for one sync's missing
+ * set: flag newly-missing rows, finalize (tombstone + delete) rows that were
+ * already flagged a full grace period ago and are still missing, and leave
+ * everything untouched if the missing count looks like a mass incident
+ * rather than real individual deletions.
+ */
+interface MissingEventRow {
+  id: string;
+  calendarSourceId: string | null;
+  externalEventId: string | null;
+  pendingDeletion: Date | null;
+}
+
+/**
+ * Apply grace-period + mass-delete-guard deletion handling to a sync's
+ * missing set, same pattern already used for CalDAV tasks (see
+ * syncCalDAVTasksForSource below). Two sync cycles roughly 10 minutes apart
+ * are required before anything is actually removed: cycle 1 flags
+ * (pendingDeletion set, which hides it from the main calendar view), cycle 2
+ * finalizes (tombstoned + deleted) if it's still missing. A single flaky
+ * response can flag something without that second confirmation ever landing,
+ * which self-heals via the reappeared-event handling each sync already does.
+ *
+ * @param missing - Rows present locally (with an externalEventId) but absent
+ *   from the latest pull.
+ * @param syncedCount - Total local rows considered in this sync's scope,
+ *   for sizing the mass-delete guard.
+ * @param sourceLabel - Used only in the guard-tripped log line.
+ */
+interface DeletionReviewResult {
+  /** Newly flagged this sync (hidden from the main view, not yet finalized). */
+  flagged: number;
+  /** Already flagged a full grace period ago, still missing - tombstoned + deleted now. */
+  finalized: number;
+}
+
+async function applyEventDeletionReview(
+  missing: MissingEventRow[],
+  syncedCount: number,
+  sourceLabel: string,
+): Promise<DeletionReviewResult> {
+  if (missing.length === 0) return { flagged: 0, finalized: 0 };
+
+  const review = decideDeletionReview({ syncedCount, missingCount: missing.length });
+
+  if (review.guardTripped) {
+    console.error(
+      `[Sync] ${review.withheld} ${sourceLabel} events missing at once — too many to be a normal ` +
+      'change, so none were touched. Check the connection, then sync again.',
+    );
+    return { flagged: 0, finalized: 0 };
+  }
+  if (!review.flag) return { flagged: 0, finalized: 0 };
+
+  const nowTs = Date.now();
+  const toFlag = missing.filter((e) => !e.pendingDeletion).map((e) => e.id);
+  const toFinalize = missing.filter(
+    (e) => e.pendingDeletion && nowTs - e.pendingDeletion.getTime() > MISSING_GRACE_MS,
+  );
+
+  if (toFlag.length > 0) {
+    await db.update(events).set({ pendingDeletion: new Date() }).where(inArray(events.id, toFlag));
+  }
+
+  if (toFinalize.length > 0) {
+    // Tombstone first (so a later sync can't resurrect it), matching the
+    // manual "Delete" action in /api/calendars/pending-deletions exactly.
+    for (const e of toFinalize) {
+      if (e.calendarSourceId && e.externalEventId) {
+        await db
+          .insert(dismissedEvents)
+          .values({ calendarSourceId: e.calendarSourceId, externalEventId: e.externalEventId })
+          .onConflictDoNothing();
+      }
+    }
+    await db.delete(events).where(inArray(events.id, toFinalize.map((e) => e.id)));
+  }
+
+  return { flagged: toFlag.length, finalized: toFinalize.length };
+}
 
 /**
  * Default sync window.
@@ -66,6 +149,8 @@ export interface SyncCounts {
   added: number;
   updated: number;
   removed: number;
+  /** Confirmed missing across two sync cycles and a full grace period - tombstoned + deleted, not just flagged. */
+  autoDeleted: number;
   unchanged: number;
   synced: number;
   errors: string[];
@@ -102,7 +187,7 @@ function eventChanged(a: EventContent, b: EventContent): boolean {
 
 /** A zero net-change result, optionally carrying errors (for early returns). */
 function emptyCounts(errors: string[] = []): SyncCounts {
-  return { added: 0, updated: 0, removed: 0, unchanged: 0, synced: 0, errors };
+  return { added: 0, updated: 0, removed: 0, autoDeleted: 0, unchanged: 0, synced: 0, errors };
 }
 
 /** External event ids the user deleted locally (tombstones) — skip on re-sync. */
@@ -148,7 +233,7 @@ export async function syncGoogleCalendarSource(
   } = {}
 ): Promise<SyncCounts> {
   const errors: string[] = [];
-  let added = 0, updated = 0, removed = 0, unchanged = 0;
+  let added = 0, updated = 0, removed = 0, autoDeleted = 0, unchanged = 0;
 
   // Fetch the calendar source
   const source = await db.query.calendarSources.findFirst({
@@ -355,14 +440,13 @@ export async function syncGoogleCalendarSource(
     ));
   }
 
-  for (const prismEvent of prismEventsToCheck) {
-    // Only flag if it has an external_event_id (was synced) but is no longer in Google
-    if (prismEvent.externalEventId && !googleEventIds.has(prismEvent.externalEventId)) {
-      if (!prismEvent.pendingDeletion) {
-        await db.update(events).set({ pendingDeletion: new Date() }).where(eq(events.id, prismEvent.id));
-        removed++;
-      }
-    }
+  const missingGoogleEvents = prismEventsToCheck.filter(
+    (e) => e.externalEventId && !googleEventIds.has(e.externalEventId),
+  );
+  {
+    const review = await applyEventDeletionReview(missingGoogleEvents, prismEventsToCheck.length, 'Google');
+    removed += review.flagged;
+    autoDeleted += review.finalized;
   }
 
   // Update last synced timestamp (preserve userOverride so sync won't auto-disable)
@@ -376,7 +460,7 @@ export async function syncGoogleCalendarSource(
     })
     .where(eq(calendarSources.id, sourceId));
 
-  return { added, updated, removed, unchanged, synced: added + updated, errors };
+  return { added, updated, removed, autoDeleted, unchanged, synced: added + updated, errors };
 }
 
 /**
@@ -387,9 +471,9 @@ export async function syncAllGoogleCalendars(
     timeMin?: Date;
     timeMax?: Date;
   } = {}
-): Promise<{ total: number; added: number; updated: number; removed: number; errors: string[] }> {
+): Promise<{ total: number; added: number; updated: number; removed: number; autoDeleted: number; errors: string[] }> {
   const allErrors: string[] = [];
-  let total = 0, added = 0, updated = 0, removed = 0;
+  let total = 0, added = 0, updated = 0, removed = 0, autoDeleted = 0;
 
   // Get all enabled Google Calendar sources
   const sources = await db.query.calendarSources.findMany({
@@ -495,6 +579,7 @@ export async function syncAllGoogleCalendars(
       added += result.added;
       updated += result.updated;
       removed += result.removed;
+      autoDeleted += result.autoDeleted;
       allErrors.push(...result.errors);
     } catch (error) {
       const errorMsg = `Failed to sync calendar "${source.dashboardCalendarName}": ${error instanceof Error ? error.message : String(error)}`;
@@ -503,7 +588,7 @@ export async function syncAllGoogleCalendars(
     }
   }
 
-  return { total, added, updated, removed, errors: allErrors };
+  return { total, added, updated, removed, autoDeleted, errors: allErrors };
 }
 
 const ICAL_DISABLE_THRESHOLD = 3;
@@ -547,7 +632,7 @@ export async function syncIcalCalendarSource(
   } = {}
 ): Promise<SyncCounts> {
   const errors: string[] = [];
-  let added = 0, updated = 0, removed = 0, unchanged = 0;
+  let added = 0, updated = 0, removed = 0, autoDeleted = 0, unchanged = 0;
 
   const source = await db.query.calendarSources.findFirst({
     where: eq(calendarSources.id, sourceId),
@@ -751,13 +836,13 @@ export async function syncIcalCalendarSource(
       isNotNull(events.pendingDeletion),
     ));
   }
-  for (const ev of prismEvents) {
-    if (ev.externalEventId && !externalIds.has(ev.externalEventId)) {
-      if (!ev.pendingDeletion) {
-        await db.update(events).set({ pendingDeletion: new Date() }).where(eq(events.id, ev.id));
-        removed++;
-      }
-    }
+  const missingIcalEvents = prismEvents.filter(
+    (e) => e.externalEventId && !externalIds.has(e.externalEventId),
+  );
+  {
+    const review = await applyEventDeletionReview(missingIcalEvents, prismEvents.length, 'iCal');
+    removed += review.flagged;
+    autoDeleted += review.finalized;
   }
 
   // A feed that parses cleanly but yields zero VEVENTs is usually a
@@ -783,7 +868,7 @@ export async function syncIcalCalendarSource(
 
   if (staleGoogleWebLink) errors.push(GOOGLE_WEB_LINK_ERROR);
 
-  return { added, updated, removed, unchanged, synced: added + updated, errors };
+  return { added, updated, removed, autoDeleted, unchanged, synced: added + updated, errors };
 }
 
 /**
@@ -795,9 +880,9 @@ export async function syncAllIcalCalendars(
     timeMin?: Date;
     timeMax?: Date;
   } = {}
-): Promise<{ total: number; added: number; updated: number; removed: number; errors: string[] }> {
+): Promise<{ total: number; added: number; updated: number; removed: number; autoDeleted: number; errors: string[] }> {
   const allErrors: string[] = [];
-  let total = 0, added = 0, updated = 0, removed = 0;
+  let total = 0, added = 0, updated = 0, removed = 0, autoDeleted = 0;
 
   const sources = await db.query.calendarSources.findMany({
     where: and(
@@ -813,6 +898,7 @@ export async function syncAllIcalCalendars(
       added += result.added;
       updated += result.updated;
       removed += result.removed;
+      autoDeleted += result.autoDeleted;
       allErrors.push(...result.errors);
     } catch (error) {
       const errorMsg = `Failed to sync iCal calendar "${source.dashboardCalendarName}": ${error instanceof Error ? error.message : String(error)}`;
@@ -821,7 +907,7 @@ export async function syncAllIcalCalendars(
     }
   }
 
-  return { total, added, updated, removed, errors: allErrors };
+  return { total, added, updated, removed, autoDeleted, errors: allErrors };
 }
 
 /**
@@ -875,7 +961,7 @@ export async function syncCalDAVCalendarSource(
   options: { timeMin?: Date; timeMax?: Date } = {}
 ): Promise<SyncCounts> {
   const errors: string[] = [];
-  let added = 0, updated = 0, removed = 0, unchanged = 0;
+  let added = 0, updated = 0, removed = 0, autoDeleted = 0, unchanged = 0;
 
   const source = await db.query.calendarSources.findFirst({
     where: eq(calendarSources.id, sourceId),
@@ -979,13 +1065,13 @@ export async function syncCalDAVCalendarSource(
         isNotNull(events.pendingDeletion),
       ));
     }
-    for (const local of localEvents) {
-      if (local.externalEventId && !upstreamUids.has(local.externalEventId)) {
-        if (!local.pendingDeletion) {
-          await db.update(events).set({ pendingDeletion: new Date() }).where(eq(events.id, local.id));
-          removed++;
-        }
-      }
+    const missingCaldavEvents = localEvents.filter(
+      (e) => e.externalEventId && !upstreamUids.has(e.externalEventId),
+    );
+    {
+      const review = await applyEventDeletionReview(missingCaldavEvents, localEvents.length, 'CalDAV');
+      removed += review.flagged;
+      autoDeleted += review.finalized;
     }
 
     await db
@@ -1004,7 +1090,7 @@ export async function syncCalDAVCalendarSource(
       .where(eq(calendarSources.id, sourceId));
   }
 
-  return { added, updated, removed, unchanged, synced: added + updated, errors };
+  return { added, updated, removed, autoDeleted, unchanged, synced: added + updated, errors };
 }
 
 /**
@@ -1154,7 +1240,7 @@ export async function syncCalDAVTasks(
 
     const nowTs = Date.now();
     const flaggable = missing.filter(
-      t => t.lastSynced && nowTs - t.lastSynced.getTime() > CALDAV_MISSING_GRACE_MS,
+      t => t.lastSynced && nowTs - t.lastSynced.getTime() > MISSING_GRACE_MS,
     );
     const review = decideDeletionReview({
       syncedCount: allLocal.length,
@@ -1197,7 +1283,7 @@ export async function syncCalDAVTasks(
     }
   }
 
-  return { added: 0, updated: 0, removed: 0, unchanged: 0, synced, errors };
+  return { added: 0, updated: 0, removed: 0, autoDeleted: 0, unchanged: 0, synced, errors };
 }
 
 /**
@@ -1205,9 +1291,9 @@ export async function syncCalDAVTasks(
  */
 export async function syncAllCalDAVCalendars(
   options: { timeMin?: Date; timeMax?: Date } = {}
-): Promise<{ total: number; added: number; updated: number; removed: number; errors: string[] }> {
+): Promise<{ total: number; added: number; updated: number; removed: number; autoDeleted: number; errors: string[] }> {
   const allErrors: string[] = [];
-  let total = 0, added = 0, updated = 0, removed = 0;
+  let total = 0, added = 0, updated = 0, removed = 0, autoDeleted = 0;
 
   const sources = await db.query.calendarSources.findMany({
     where: and(
@@ -1222,6 +1308,7 @@ export async function syncAllCalDAVCalendars(
     added += eventResult.added;
     updated += eventResult.updated;
     removed += eventResult.removed;
+    autoDeleted += eventResult.autoDeleted;
     allErrors.push(...eventResult.errors);
 
     const taskResult = await syncCalDAVTasks(source.id);
@@ -1229,7 +1316,7 @@ export async function syncAllCalDAVCalendars(
     allErrors.push(...taskResult.errors);
   }
 
-  return { total, added, updated, removed, errors: allErrors };
+  return { total, added, updated, removed, autoDeleted, errors: allErrors };
 }
 
 /**

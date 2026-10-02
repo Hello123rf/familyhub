@@ -4,7 +4,7 @@ import { voiceOk, voiceError } from '@/lib/api/voiceResponse';
 import { phraseUpcomingEvents } from '@/lib/api/voicePhrases';
 import { db } from '@/lib/db/client';
 import { events } from '@/lib/db/schema';
-import { gte, asc } from 'drizzle-orm';
+import { and, gte, asc, isNull } from 'drizzle-orm';
 import { logError } from '@/lib/utils/logError';
 
 /**
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
           location: events.location,
         })
         .from(events)
-        .where(gte(events.startTime, now))
+        .where(and(gte(events.startTime, now), isNull(events.pendingDeletion)))
         .orderBy(asc(events.startTime))
         .limit(count);
 

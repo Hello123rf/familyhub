@@ -107,7 +107,11 @@ export async function GET(request: NextRequest) {
       and(lte(events.startTime, startDate), gte(events.endTime, endDate))
     );
 
-    const conditions = [dateRangeCondition];
+    // Flagged-pending-deletion events are hidden from the main view the
+    // moment sync notices them missing from the source, rather than only
+    // once a human clicks through the Review queue - see
+    // applyEventDeletionReview in calendar-sync.ts for when this clears.
+    const conditions = [dateRangeCondition, isNull(events.pendingDeletion)];
 
     if (calendarId) {
       conditions.push(eq(events.calendarSourceId, calendarId));
