@@ -14,6 +14,7 @@ import { eq, and, isNull, like } from 'drizzle-orm';
 import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { calculateNextDue } from '@/lib/utils/calculateNextDue';
 import { logError } from '@/lib/utils/logError';
+import { rateLimitGuard } from '@/lib/cache/rateLimit';
 
 const KIOSK_KEY_PREFIX = 'kiosk:';
 type KioskTokenValue = { userId: string; userName: string; userColor: string; createdAt: string };
@@ -35,6 +36,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   const redirectBase = `/kiosk/${slug}`;
 
   try {
+    // Defense in depth: the slug itself is an unguessable 24-byte token, but
+    // nothing stops a future shorter/reused token from making this guessable,
+    // and there's no other rate limit on this unauthenticated POST.
+    const limited = await rateLimitGuard(slug, 'kiosk-complete', 20, 60);
+    if (limited) return NextResponse.redirect(new URL(redirectBase, request.url));
+
     const identity = await resolveKioskToken(slug);
     if (!identity) {
       return NextResponse.redirect(new URL('/kiosk/invalid', request.url));

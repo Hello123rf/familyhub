@@ -250,7 +250,7 @@ export const googleTasksProvider: TaskProvider = {
       });
 
       if (!response.ok) {
-        console.error('Failed to refresh Google tokens:', await response.text());
+        console.error('Failed to refresh Google tokens:', response.status, response.statusText);
         return null;
       }
 

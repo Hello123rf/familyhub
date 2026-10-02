@@ -190,7 +190,7 @@ export const microsoftTodoWishItemProvider: WishItemProvider = {
       });
 
       if (!response.ok) {
-        console.error('Failed to refresh Microsoft tokens:', await response.text());
+        console.error('Failed to refresh Microsoft tokens:', response.status, response.statusText);
         return null;
       }
 

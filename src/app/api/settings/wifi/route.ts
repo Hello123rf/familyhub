@@ -11,10 +11,19 @@ const WIFI_SETTINGS_KEY = 'wifiConfig';
 
 /**
  * GET /api/settings/wifi - Get WiFi configuration (requires auth; shown on babysitter page after PIN unlock)
+ *
+ * Deliberately excludes 'child': the intended readers are a parent (editing
+ * it in Settings) and a babysitter (logged in as guest, unlocking the
+ * babysitter page). A kid's own PIN session has no documented reason to read
+ * the plaintext password back from the API.
  */
 export async function GET() {
   const auth = await requireAuth();
   if (auth instanceof NextResponse) return auth;
+
+  if (auth.role === 'child') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
 
   try {
     const result = await db
